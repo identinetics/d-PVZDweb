@@ -14,8 +14,8 @@ services:
     ports:
       - "2022:2022"
     networks:
-      dockernet:
-        ipv4_address: 10.1.1.39 
+      dfrontend:
+        ipv4_address: 10.1.2.39
     volumes:
       - pvzdweb.home_backend:/home/backend:Z
       - pvzdweb.opt_etc_ssh:/opt/etc/ssh:Z
@@ -36,13 +36,13 @@ services:
     container_name: pvzdweb-sshtest
     hostname: pvzdweb-sshtest
     networks:
-      dockernet:
+      dfrontend:
     volumes:
       - pvzdweb-sshtest.log:/var/log:Z
     cap_drop:
       - ALL
 networks:
-  dockernet:
+  dfrontend:
     external: true
 volumes:
     pvzdweb.home_backend:

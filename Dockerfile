@@ -1,4 +1,4 @@
-FROM intra/centos7_py34_base
+FROM intra/centos7_base
 LABEL maintainer="Rainer Hörbe <r2h2@hoerbe.at>"
 
 RUN yum -y update \
@@ -11,12 +11,17 @@ ENV JAVA_HOME=/etc/alternatives/java_sdk_1.8.0 \
     JDK_HOME=/etc/alternatives/java_sdk_1.8.0 \
     JRE_HOME=/etc/alternatives/java_sdk_1.8.0/jre
 
+# install python3.5 (required minimum for this Django app)
+RUN yum -y install https://centos7.iuscommunity.org/ius-release.rpm \
+    && yum -y install python35u python35u-setuptools python35u-devel python35u-pip \
+ && yum clean all
+
 # install application
 # ====================================
 COPY install/PVZDweb /opt/PVZDweb
-RUN pip3 install virtualenv \
+RUN pip3.5 install virtualenv \
  && mkdir -p /opt/venv \
- && virtualenv --python=/usr/bin/python3 /opt/venv/pvzdweb \
+ && virtualenv --python=/usr/bin/python3.5 /opt/venv/pvzdweb \
  && source /opt/venv/pvzdweb/bin/activate \
  && pip install Cython \
  && pip install -r /opt/PVZDweb/requirements.txt
