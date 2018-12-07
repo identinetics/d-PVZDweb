@@ -22,6 +22,7 @@ COPY install/PVZDweb /opt/PVZDweb
 RUN pip3.5 install virtualenv \
  && mkdir -p /opt/venv \
  && virtualenv --python=/usr/bin/python3.5 /opt/venv/pvzdweb \
+ && printf "\nsource /opt/venv/pvzdweb/bin/activate\n" >> $HOME/.profile \
  && source /opt/venv/pvzdweb/bin/activate \
  && pip install Cython \
  && pip install -r /opt/PVZDweb/requirements.txt
@@ -61,7 +62,8 @@ RUN mkdir -p /var/log/$CONTAINERUSER \
  && chown -R $CONTAINERUSER:$CONTAINERGROUP /var/log/$CONTAINERUSER \
  && chmod 777 /run
 # export static files to be served from nginx
-VOLUME /opt/PVZDweb/static_root
+VOLUME /opt/PVZDweb/static_root \
+       /opt/PVZDweb/database
 # Port for nginx proxy
 EXPOSE 8080
 
