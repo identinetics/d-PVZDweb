@@ -1,0 +1,6 @@
+[submodule "dcshell"]
+	path = dcshell
+	url = https://github.com/identinetics/dcshell
+[submodule "install/PVZDweb"]
+	path = install/PVZDweb
+	url = https://github.com/identinetics/PVZDweb

@@ -1,0 +1,4 @@
+REPO::identinetics/d-PVZDfe/==#4b00ad4
+REPO::identinetics/dscripts/master==#90e0b81
+REPO::identinetics/dcshell/==#eb1a7a1
+FROM::intra/centos7_py34_base==accae677c97e

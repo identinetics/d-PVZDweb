@@ -1,0 +1,110 @@
+// This pipeline requires 3 jenkins build processes (nested jobs)
+pipeline {
+    agent any
+    options { disableConcurrentBuilds() }
+    parameters {
+        string(defaultValue: 'True', description: '"True": initial cleanup: remove container and volumes; otherwise leave empty', name: 'start_clean')
+        string(description: '"True": "Set --nocache for docker build; otherwise leave empty', name: 'nocache')
+        string(description: '"True": push docker image after build; otherwise leave empty', name: 'pushimage')
+        string(description: '"True": keep running after test; otherwise leave empty to delete container and volumes', name: 'keep_running')
+        string(description: '"True": overwrite default docker registry user; otherwise leave empty', name: 'docker_registry_user')
+        string(description: '"True": overwrite default docker registry host; otherwise leave empty', name: 'docker_registry_host')
+    }
+
+    stages {
+        stage('Cleanup container, volumes') {
+            steps {
+                sh '''
+                    if [[ "$start_clean" ]]; then
+                        ln -sf conf.sh.default conf39.sh
+                        ./dscripts/manage.sh -n39 rm 2>/dev/null || true
+                        ./dscripts/manage.sh -n39 rmvol 2>/dev/null || true
+                    fi
+                '''
+            }
+        }
+        stage('Build') {
+            steps {
+                echo 'Build image'
+                sh '''
+                    rm conf.sh 2> /dev/null || true
+                    ln -sf conf.sh.default conf39.sh
+                    [[ "$pushimage" ]] && pushopt='-P'
+                    [[ "$nocache" ]] && nocacheopt='-c'
+                    ./dscripts/build.sh -n39 -p $nocacheopt $pushopt
+                '''
+            }
+        }
+        stage('Test: Setup persistent volumes') {
+            steps {
+                echo 'test if already setup'
+                sh '''#!/bin/bash
+                    ./dscripts/manage.sh -n39 statcode
+                    is_running=$?
+                    if (( $is_running > 0 )); then
+                        ./dscripts/run.sh -I -n39 /scripts/is_initialized.sh
+                        is_init=$?
+                    else
+                        ./dscripts/exec.sh -I -n39 /scripts/is_initialized.sh
+                        is_init=$?
+                    fi
+                    if (( $is_init != 0 )); then
+                        echo "setup test config"
+                        ./dscripts/run.sh -I -n39 /scripts/init_gitrepos_su.sh
+                        if (( $is_running > 0 )); then
+                            echo "start server"
+                            ./dscripts/run.sh -n39
+                            ./dscripts/manage.sh -n39 logs
+                        fi
+                        echo "copy backend ssh key to container"
+                        mkdir -p sshkeys
+                        cp install/testdata-setup/sshkeys/* sshkeys/
+                        ./setup_backend_account.sh -n39 -k sshkeys/backend_id_ecdsa.pub
+                        ./dscripts/exec.sh -I -r -n39 "ls -l /home/backend/.ssh/authorized_keys"
+                        ./dscripts/exec.sh -I -r -n39 "chown backend /home/backend/.ssh/authorized_keys"
+                        ./dscripts/exec.sh -I -r -n39 "chmod 600 /home/backend/.ssh/authorized_keys"
+                        ./dscripts/exec.sh -I -r -n39 "ls -l /home/backend/.ssh/authorized_keys"
+                        ./dscripts/exec.sh -I -r -n39 /scripts/set_initialized.sh
+                    else
+                        echo 'skipping  - already setup'
+                    fi
+                '''
+            }
+        }
+        stage('Test: run internal tests: build and run test container (99)') {
+            build job: 'd-gitlist',
+                parameters: [[$class: 'StringParameterValue', name: 'keep_running', value: 'True']]
+            steps {
+
+                echo 'test webapp'
+                sh './dscripts/exec.sh -I -n39 /tests/test_webapp.sh'
+                sh '''
+                    # --- test login with backend ssh key ---
+                    source ./conf39.sh
+                    pvzd_container=$CONTAINERNAME
+                    pvzd_containeruser=$CONTAINERUSER
+                    ln -sf conf99.sh.default conf99.sh
+                    ./dscripts/build.sh -n99 -M
+                    chmod 644 sshkeys/backend_id_ecdsa
+                    ./dscripts/run.sh -I -r -n99 /tests/test_git_client.sh $pvzd_container $pvzd_containeruser
+                    echo $?
+                '''
+            }
+        }
+    }
+    post {
+        always {
+            echo 'container status'
+            sh './dscripts/manage.sh -n39 status'
+            echo 'Remove container, volumes'
+            sh '''
+                if [[ "$keep_running" ]]; then
+                   echo "Keep container running"
+                else
+                    ./dscripts/manage.sh -n39 rm 2>/dev/null || true
+                    ./dscripts/manage.sh -n39 rmvol 2>/dev/null || true
+                fi
+            '''
+        }
+    }
+}

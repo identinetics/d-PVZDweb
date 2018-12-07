@@ -1,0 +1,93 @@
+# PVZDfe Frontend (Git Repo + Web App)
+
+## Funktion
+
+Am PVZD Frontend Host wird das Git Repository mit den Quell-Metadaten (Portalmeldungen) geführt.
+Das Git Repo ist "bare" (= nicht ausgecheckt) und dient als Synchronisationpunkt zwischen Backend und Frontend Containern.
+Es hat folgende Schnittstellen:
+
+-  SSH (für den PEP)
+-  HTTP/MOAID (Webapp für den PMP und Portal-Admin)
+-  Shared Docker Volume "var_lib_git" (Gitlist App als Repo Browser)
+-  HTTP/public (IDP Discovery Service)
+
+## Übersicht der Artefakte
+ 
+Der Container beinhaltet folgende Objekte/Services/etc.:
+
+|===
+| Artefakt | Wert | Beschreibung
+| group | repousers | Schreibzugriff für backend auf das Repo
+| path | /var/lib/git/pvzd/repodir_bare | PVZD Frontend Repo (bare)
+| path | /var/lib/git/repodir_upload | PVZD Frontend Repo (checkout for webapp and gitweb)
+| logging | /var/log/pvzdfe/gitweb.log | gibtweb
+| logging | /var/log/pvzdfe/webapp.log | webapp (upload form)
+| logging | STDOUT/STDERR | sshd  
+| repo dir | ./policydir | Publiziert das Policy Directory
+| repo dir | ./published | Hier werden hochgeladene Dateien her verschoben wenn sie OK sind
+| repo dir | ./rejected | Hier werden hochgeladene Dateien her verschoben wenn sie nicht OK sind
+| repo dir | ./request_queue | Hier checkt die Webapp hochgeladene Dateien ein
+| service | sshd | sshd Service
+| service | webapp | Upload App (Portalmeldungen hochladen)
+| user | backend | PVZD PEP (remote)
+| user | pvzdfe | Eigentümer des 'bare' Git Repo
+|===
+
+
+
+## Vorbereitung der Installation
+
+Das Frontend-Repo ist auf 2 Docker Container verteilt: pvzdfe und gitlist.
+Das Service wird über einen externen Proxy angebunden, der TLS terminiert (z.B. https://mdreg.portalverbund.gv.at).
+
+Für die Kommunikation mit dem Frontend Repo muss sich der PEP (Backend Server) als User backend per ssh anmelden.
+Dafür ist am Backend-Server ein SSH-Schlüsselpaar ohne Passphrase zu erstellen:
+
+    ssh-keygen -t ecdsa -f ~/.ssh/backend_id_ecdsa
+
+Der Public Key (~/.ssh/backend_id_ecdsa.pub) wird dann auf den Dockerhost für den Frontend Container kopiert und später verwendet.
+
+
+## Installation
+
+Das notwendige Source-Repo ist:
+
+* https://github.com/identinetics/PVZDfrontend
+
+Die Installation und das Beispiel-Setup ist im Jenkinsfile des jeweiligen Git-Repos definiert.
+
+Unterschiede zum Ablauf mit Jenkins:
+
+* Im CI-Workflow wird der SSH-Key für den Backend-user im Jenkins-Workspace erzeugt.
+  Bei Deployments in der Produktionszone ist der SSH-Key am Backend-Server zu erzeugen und von dort zu kopieren. (Siehe oben.)
+* Die Authentifizierung des Webservers ist an den Container d-shibsp ausgelagert (PVP2-S + MOAID).
+  Für den Test ohne MOAID kann Basic Authentication im nginx Proxy eingerichtet werden:
+
+  printf "testuser:$(openssl passwd -crypt test)\n" > /etc/nginx/basic_authn_passwords
+  # /etc/nginx/nginx.conf: Einträge mit "auth_basic..." aktivieren.
+
+* In dc.yaml ist ev. der networks Eintrag anzupassen. Um nicht mit dem Repo in Konflikt zu kommen,
+  kann man ein docker-overreide.yaml dafür verwenden.
+  Siehe Docker Netzwork Dokumentation.
+
+
+## Konfiguration
+
+Der Container startet 2 Netzwerkdienste:
+
+1. Port 8080 - WebApp. Für die Erreichbarkeit aud dem Imternet
+   wird ein Proxy eingerichtet von https://mdreg.example.org/ auf http://<container-ip>:8080/
+2. Port 2022 - Git SSH (unabhängig von Docker Host SSH) Verbindung vom PVZDpep (Backend System)
+
+Der User für die beiden Netzwerkdienste ist in conf.sh als CONTAINERUSER definiert (Default: pvzdfe).
+
+Der SSH-User für den PVZD-PEP ist extra mit git-shell Zugriff  einzurichten:
+Dafür ist der Public Key (~.ssh/id_ecdsa.pub) in den Frontend-Container zu kopieren, z.B.:
+
+    docker cp backend_id_ecdsa.pub pvzdfe:/home/backend/.ssh/authorized_keys
+    # test vom Backend-System aus:
+    # git clone -v ssh://gitweb@<targethost>/var/lib/git/
+
+## Beispielkonfiguration Webportal
+
+Im Verzeichnis shibsp sind Beispiele zu Konfiguration eines PVP2-Proxy.

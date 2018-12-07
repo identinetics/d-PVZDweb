@@ -1,0 +1,7 @@
+REPO::identinetics/d-PVZDfe/==#4084347
+REPO::identinetics/dscripts/==#3f92758
+FROM::centos:centos7==e934aafc2206
+No or more than one (3) conf*.sh
+conf39.sh
+conf99.sh
+conf.sh

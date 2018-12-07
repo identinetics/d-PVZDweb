@@ -1,0 +1,70 @@
+<SPConfig xmlns="urn:mace:shibboleth:2.0:native:sp:config"
+    xmlns:conf="urn:mace:shibboleth:2.0:native:sp:config"
+    xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
+    xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"    
+    xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
+    clockSkew="180">
+    
+    <!--RequestMapper type="Native">
+      <RequestMap applicationId="default">
+        <Host scheme="https" name="mdreg.test.portalverbund.gv.at">
+            <Path name="secure" authType="shibboleth" requireSession="true">
+                <AccessControl>
+                   <Rule require="PVP-GIVENNAME">Franz Rainer eID-Test</Rule>
+                </AccessControl>
+            </Path>
+        </Host>
+      </RequestMap>
+    </RequestMapper-->
+
+    <RequestMapper type="Native">
+      <RequestMap applicationId="default">
+        <Host scheme="https" name="mdreg.test.portalverbund.gv.at" authType="shibboleth" requireSession="true">
+             <AccessControlProvider uri="/etc/shibboleth/shibacl.xml" type="edu.internet2.middleware.shibboleth.sp.provider.XMLAccessControl" />
+        </Host>
+      </RequestMap>
+    </RequestMapper>
+
+    <ApplicationDefaults id="default" policyId="default"
+                         entityID="https://mdreg.test.portalverbund.gv.at/sp"
+                         REMOTE_USER="X-PVP-USERID X-PVP-GID X-PVP-BPK persistent-id targeted-id"
+                         signingAlg="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
+                         signing="true" 
+                         encryption="false" >
+
+        <Sessions lifetime="28800" timeout="3600" relayState="ss:mem"
+                  checkAddress="false" handlerSSL="false" cookieProps="https"
+                  exportLocation="/GetAssertion" exportACL="0.0.0.0/0"
+                  idpHistory="true" idpHistoryDays="60">
+
+            <!--
+            <SSO entityID="https://idp.test.portalverbund.gv.at/idp.xml">SAML2</SSO>
+            -->
+            <SSO discoveryProtocol="SAMLDS" discoveryURL="https://disco.test.portalverbund.gv.at/role/idp.ds">SAML2</SSO>
+
+            <Logout>SAML2 </Logout>
+            <Handler type="MetadataGenerator" Location="/metadata" signing="false"/>
+            <Handler type="Status" Location="/Status" acl="10.1.1.2 127.0.0.1 ::1"/>
+            <Handler type="Session" Location="/Session" showAttributeValues="false"/>
+            <Handler type="DiscoveryFeed" Location="/DiscoFeed"/>
+        </Sessions>
+
+        <Errors supportContact="support@identinetics.com"
+            helpLocation="/about.html"
+            styleSheet="/shibboleth-sp/main.css"/>
+        
+        <!--MetadataProvider type="XML" validate="true" file="/opt/md_feed/metadata.xml"/-->
+        <MetadataProvider type="XML" url="http://mdfeed.test.portalverbund.gv.at/metadata.xml" 
+                          backingFilePath="metadata_backing.xml">
+            <MetadataFilter type="Signature" certificate="metadata_crt.pem"/>
+        </MetadataProvider>
+        <AttributeExtractor type="XML" validate="true" reloadChanges="false" path="attribute-map.xml"/>
+        <AttributeResolver type="Query" subjectMatch="true"/>
+        <AttributeFilter type="XML" validate="true" path="attribute-policy.xml"/>
+        <CredentialResolver type="File" key="sp-key.pem" certificate="sp-cert.pem"/>
+
+    </ApplicationDefaults>
+    <SecurityPolicyProvider type="XML" validate="true" path="security-policy.xml"/>
+    <ProtocolProvider type="XML" validate="true" reloadChanges="false" path="protocols.xml"/>
+
+</SPConfig>

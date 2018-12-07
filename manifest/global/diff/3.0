@@ -1,0 +1,41 @@
+--- 
+
++++ 
+
+@@ -1,6 +1,7 @@
+
+-REPO::identinetics/d-PVZDfe/master==#7c4c3c4
+
+-REPO::identinetics/dscripts/==#4402031
+
++REPO::identinetics/d-PVZDfe/master==#d37b7dc
+
++REPO::identinetics/dscripts/==#17fb1e4
+
+ FROM::centos:centos7==e934aafc2206
+
++sudo -n docker run -i -t --rm -u 0 --hostname=pvzdfe --name=pvzdfe --label x.service=pvzd_frontend -e CONTAINERUSER=pvzdfe --net dockernet --ip 10.1.1.39 -p 2022:2022 -v pvzdfe.var_lib_git:/var/lib/git:z -v pvzdfe.var_log:/var/log/:Z -v pvzdfe.opt_etc_ssh:/opt/etc/ssh:Z -v pvzdfe.home_backend:/home/backend:Z r2h2/pvzdfe /opt/bin/manifest2.sh
+
+ PYTHON::attrs==18.1.0
+
+ PYTHON::certifi==2018.4.16
+
+ PYTHON::chardet==3.0.4
+
+@@ -21,7 +22,7 @@
+
+ FILE::/opt/bin/manifest2.sh==#a72abf4
+
+ FILE::/opt/etc/ssh/persistence_status==#e3b0c44
+
+ FILE::/opt/etc/ssh/sshd_config==#85d05f1
+
+-FILE::/opt/etc/REPO_STATUS==#b966c8c
+
++FILE::/opt/etc/REPO_STATUS==#253d618
+
+ FILE::/opt/webapp/README.md==#4918737
+
+ FILE::/opt/webapp/__init__.py==#e3b0c44
+
+ FILE::/opt/webapp/app_handler.py==#0884402

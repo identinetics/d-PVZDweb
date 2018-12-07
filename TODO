@@ -1,0 +1,5 @@
+setup PostgresDB
+ - python manage.py createsuperuser
+ - unit tests
+ - initial load
+

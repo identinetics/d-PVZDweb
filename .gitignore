@@ -1,0 +1,13 @@
+**/.DS_Store
+.idea/
+.cache
+**/*.pyc
+**/__pycache__/
+install/testdata-run/
+install/testdata-run/README
+docker-compose.yaml
+docker-compose-override.yaml
+*.iml
+manifest/local/
+out/
+work/

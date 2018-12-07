@@ -1,0 +1,52 @@
+version: "2"
+services:
+  pvzdweb:
+    build:
+      context: .
+    image: local/pvzdweb
+    container_name: pvzdweb
+    hostname: pvzdweb
+    labels:
+      x.service: pvzd_frontend
+    restart: unless-stopped
+    environment:
+      CONTAINERUSER: pvzdfe
+    ports:
+      - "2022:2022"
+    networks:
+      dockernet:
+        ipv4_address: 10.1.1.39 
+    volumes:
+      - pvzdweb.home_backend:/home/backend:Z
+      - pvzdweb.opt_etc_ssh:/opt/etc/ssh:Z
+      - pvzdweb.var_lib_git:/var/lib/git:z
+      - pvzdweb.var_log:/var/log:Z
+    # following capability set is insuffient for running sshd -> run with default capabilities
+    #cap_drop:
+    #  - ALL
+    #cap_add:
+    #  - CHOWN
+    #  - SETGID
+    #  - SETUID
+  pvzdweb-sshtest:
+    build:
+        context: .
+        dockerfile: Dockerfile99.sshtest
+    image: r2h2/pvzdweb-sshtest
+    container_name: pvzdweb-sshtest
+    hostname: pvzdweb-sshtest
+    networks:
+      dockernet:
+    volumes:
+      - pvzdweb-sshtest.log:/var/log:Z
+    cap_drop:
+      - ALL
+networks:
+  dockernet:
+    external: true
+volumes:
+    pvzdweb.home_backend:
+    pvzdweb.opt_etc_ssh:
+    pvzdweb.var_lib_git:
+    pvzdweb.var_log:
+    pvzdweb-sshtest.log:

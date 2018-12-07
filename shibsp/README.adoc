@@ -1,0 +1,33 @@
+= Konfiguration Shibboleth als PVP2 SP für einen MOA-ID 3.x IDP
+
+== Authentifizierung & Autorisierung via MOA-ID
+
+Vor den PVZD Frontendserver (Gitlist und Upload Forms) wird ein PVP2-kompatibler Reverse Proxy gesetzt,
+der die Signatur-Zertifikate gegen die im Policy Directory enthaltenen Einträge prüft.
+Damit ist automatisch ein Login für die registrierten Portaladmins möglich.
+
+Der Reverse Proxy ist ein Apache httpd mit mod_shib und bildet die Pfade wie folgt ab:
+
+|===
+|source|target
+|/git/ | gitlab container (pvzd/repodir_bare)
+|/pvzd/ | pvzdfe container (/mdupload, /pmpupload)
+|===
+
+
+== Installation
+
+Das Github-Repository identinetics/d-shibsp wird für diesen Zweck eingerichtet (-> README):
+
+* Build image
+* Express setup
+* zusätzliche Konfiguration
+
+Die zusätzliche Konfiguration umfasst folgende Punkte:
+
+* Im Apache vhost ist mod_shib entsprechend dem <Location> Element in vhost.conf einzurichten
+* in shibboleth.xml ist das <RequestMapper> Element entsprechend dem Beispiel in shibboleth2.xml einzutragen
+* shibacl wird vom PVZD Backend erzeugt und im Repository abgelegt. Es enthält die Liste der gültigen Zertifikate,
+  mit dem der von MOA-ID übermittelte Wert geprüft wird.
+  Das Repository Volume ist in den shibsp-Container zu mappen und der Pfad im <AccessControlProvider> anzupassen (-> shibboleth2.xml)
+

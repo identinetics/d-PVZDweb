@@ -1,0 +1,7 @@
+<?xml version='1.0' ?>
+<!-- Broken data: root element not in md namespace -->
+<EntityDescriptor entityID="https://idp4.test.example.org/idp.xml">
+  <IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://idp5.test.example.org/idp/profile/SAML2/Redirect/SSO"/>
+  </IDPSSODescriptor>
+</EntityDescriptor>
