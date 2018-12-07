@@ -14,7 +14,12 @@ ENV JAVA_HOME=/etc/alternatives/java_sdk_1.8.0 \
 # install application
 # ====================================
 COPY install/PVZDweb /opt/PVZDweb
-RUN pip install -r /opt/PVZDweb/requirements.txt
+RUN pip3 install virtualenv \
+ && mkdir -p /opt/venv \
+ && virtualenv --python=/usr/bin/python3 /opt/venv/pvzdweb \
+ && source /opt/venv/pvzdweb/bin/activate \
+ && pip install Cython \
+ && pip install -r /opt/PVZDweb/requirements.txt
 COPY install/scripts/* /scripts/
 RUN chmod +x /scripts/*
 
