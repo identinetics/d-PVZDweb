@@ -2,8 +2,11 @@
 
 # start webapp and sshd
 
+echo 'starting http proxy in background' 1>&2
+/scripts/start_httpproxy.sh
+
 echo 'starting webapp in background' 1>&2
-su - $CONTAINERUSER -c "source /opt/venv/pvzdweb/bin/activate; export CONTAINERUSER=$CONTAINERUSER; /opt/PVZDweb/bin/start_webapp.sh"
+/scripts/start_webapp.sh
 
 echo 'starting ssh' 1>&2
 /scripts/start_sshd.sh

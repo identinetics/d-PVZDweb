@@ -17,12 +17,10 @@ services:
       dfrontend:
         ipv4_address: 10.1.2.39
     volumes:
-      - pvzdweb.home_backend:/home/backend:Z
-      - pvzdweb.opt_etc_ssh:/opt/etc/ssh:Z
+      - pvzdweb.config:/config:Z
       - pvzdweb.var_lib_git:/var/lib/git:z
       - pvzdweb.var_log:/var/log:Z
       - pvzdweb.opt_PVZDweb_database:/opt/PVZDweb/database:Z
-      - pvzdweb.opt_PVZDweb_static_root:/opt/PVZDweb/static_root:z
   pvzdweb-sshtest:
     build:
         context: .
@@ -40,10 +38,8 @@ networks:
   dfrontend:
     external: true
 volumes:
-    pvzdweb.home_backend:
-    pvzdweb.opt_etc_ssh:
+    pvzdweb.config:
     pvzdweb.var_lib_git:
     pvzdweb.var_log:
     pvzdweb-sshtest.log:
     pvzdweb.opt_PVZDweb_database:
-    pvzdweb.opt_PVZDweb_static_root:
