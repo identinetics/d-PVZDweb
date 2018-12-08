@@ -88,6 +88,16 @@ Dafür ist der Public Key (~.ssh/id_ecdsa.pub) in den Frontend-Container zu kopi
     # test vom Backend-System aus:
     # git clone -v ssh://gitweb@<targethost>/var/lib/git/
 
+## Logging
+
+Die Webanwendung loggt auf stdout/stderr.
+Die Logfiles werden außerhalb des Containers verwaltet, z.B. mit `docker logs` oder einem Logging Driver.
+
+Der nginx-Proxy loggt auf /var/log/nginx.
+Diese Files sind redundant und daher eher unwichtig.
+Mit dem Script /scripts/nginx_logrotate.sh werden die Files rotiert und eine Generation aufbewahrt.
+Das Script kann z.B. täglich aufgerufen werden.
+
 ## Beispielkonfiguration Webportal
 
 Im Verzeichnis shibsp sind Beispiele zu Konfiguration eines PVP2-Proxy.

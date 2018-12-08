@@ -2,8 +2,7 @@
 
 # The details of the gunicorn configuration are
 
-scriptsdir=$(cd "$(dirname ${BASH_SOURCE[0]})" && pwd)
-source $scriptsdir/setenv.sh
+source /opt/PVZDweb/bin/setenv.sh
 
 #su - $CONTAINERUSER -c "source /opt/venv/pvzdweb/bin/activate; export CONTAINERUSER=$CONTAINERUSER; /opt/PVZDweb/bin/start_webapp.sh &"
 

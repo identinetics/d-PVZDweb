@@ -42,11 +42,12 @@ EXPOSE 8080
 
 # persist deployment-specific configuration in /ext/
 RUN mkdir -p /config/etc/gunicorn \
-             /econfigxt/etc/nginx \
+             /config/etc/nginx \
              /config/etc/ssh \
-             /config/home
+             /config/home \
+ && cp -pr /etc/nginx/* /config/etc/nginx/
 COPY install/etc /config/etc
-COPY install/PVZDweb/static_root /config/pvzdweb/static
+COPY install/PVZDweb/static_root /config/pvzdweb/static/static
 VOLUME /config
 
 # create container user owning database, git repo + web service processes
