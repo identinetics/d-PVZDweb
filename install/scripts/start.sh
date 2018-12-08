@@ -8,7 +8,7 @@ echo 'starting http proxy in background' 1>&2
 echo 'starting webapp in background' 1>&2
 /scripts/start_webapp.sh
 
-echo 'starting ssh' 1>&2
+echo 'starting sshd' 1>&2
 /scripts/start_sshd.sh
 
 #echo 'keeping git repos in sync'

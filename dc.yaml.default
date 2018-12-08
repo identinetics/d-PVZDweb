@@ -1,6 +1,6 @@
 version: "2"
 services:
-  pvzdweb:
+  pvzdfe:
     build:
       context: .
     image: local/pvzdweb

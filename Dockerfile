@@ -5,7 +5,9 @@ RUN yum -y update \
  && yum -y install java-1.8.0-openjdk-devel.x86_64 \
  && yum -y install gcc gcc-c++ sudo wget \
  && yum -y install libffi-devel libxslt-devel libxml2 libxml2-devel openssl-devel \
- && yum -y install openssh-server nginx \
+ && yum -y install openssh-server  \
+ && yum -y install epel-release \
+ && yum -y install nginx \
  && yum clean all
 ENV JAVA_HOME=/etc/alternatives/java_sdk_1.8.0 \
     JDK_HOME=/etc/alternatives/java_sdk_1.8.0 \
@@ -44,8 +46,7 @@ EXPOSE 8080
 RUN mkdir -p /config/etc/gunicorn \
              /config/etc/nginx \
              /config/etc/ssh \
-             /config/home \
- && cp -pr /etc/nginx/* /config/etc/nginx/
+             /config/home
 COPY install/etc /config/etc
 COPY install/PVZDweb/static_root /config/pvzdweb/static/static
 VOLUME /config
