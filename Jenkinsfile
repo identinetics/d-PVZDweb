@@ -20,7 +20,7 @@ pipeline {
                         cp dc.yaml.default dc.yaml
                         cp dc-setup.yaml.default dc-setup.yaml
                     fi
-                    head dc.yaml
+                    head -6 dc.yaml | tail -1
                 '''
             }
         }
@@ -29,8 +29,10 @@ pipeline {
                 expression { params.$start_clean?.trim() != '' }
             }
             steps {
-                sh '''
-                    docker-compose -f dc.yaml down -v 2>/dev/null | true
+                sh '''#!/bin/bash -xv
+                    source ./jenkins_scripts.sh
+                    remove_containers
+                    remove_volumes
                 '''
             }
         }
@@ -42,54 +44,58 @@ pipeline {
                     export PROJ_HOME='.'
                     #TODO checkout pvzdlib
 
-                    ./dcshell/build -f dc.yaml $nocacheopt
-                    echo "=== build completed with rc $?"
+                    ./dcshell/build -f dc.yaml $nocacheopt || \
+                        (rc=$?; echo "build failed with rc rc?"; exit $rc)
                 '''
             }
         }
-        stage('Test: Setup persistent volumes, ') {
+        stage('Test: Setup') {
             steps {
                 echo 'Setup unless already setup and running (keeping previously initialized data) '
                 sh '''#!/bin/bash
-                    source ./dcshell/dcshell_lib.sh
-                    if [[ "$(docker ps -f name=pvzdfe |egrep -v ^CONTAINER)" ]]; then
+                    source jenkins_scripts.sh
+                    create_network_dfrontend
+                    # source ./dcshell/dcshell_lib.sh
+                    service=pvzdfe
+                    container='pvzdweb'
+                    if [[ "$(docker container ls -f name=$container | egrep -v ^CONTAINER)" ]]; then
                         is_running=0  # running
                     else
                         is_running=1  # not running
-                        docker rm -f pvzdfe 2>/dev/null || true # remove any stopped container
+                        docker container rm -f $container 2>/dev/null || true # remove any stopped container
                     fi
                     if (( $is_running == 0 )); then
-                        docker-compose -f dc.yaml exec -T pvzdfe /scripts/is_initialized.sh
+                        docker-compose -f dc.yaml exec -T $service /scripts/is_initialized.sh
                         is_init=$? # 0=init, 1=not init
                     else
-                        docker-compose -f dc.yaml run -T --rm pvzdfe /scripts/is_initialized.sh
+                        docker-compose -f dc.yaml run -T --rm $service /scripts/is_initialized.sh
                         is_init=$?
                     fi
                     if (( $is_init != 0 )); then
                         echo "setup initial database and testdata"
                         if (( $is_running == 0 )); then
-                            docker-compose -f dc.yaml exec -T pvzdfe /scripts/init_data.py
+                            docker-compose -f dc.yaml exec -T $service /scripts/init_data.py
                         else
-                            docker-compose -f dc.yaml run -T --rm pvzdfe /scripts/init_data.py
+                            docker-compose -f dc.yaml run -T --rm $service /scripts/init_data.py
                         fi
                         if (( $is_running == 1 )); then
                             echo "start server"
-                            docker-compose -f dc.yaml up -d pvzdfe
+                            docker-compose -f dc.yaml up -d $service
                             sleep 2
                             echo "=== tail container log"
-                            docker-compose -f dc.yaml logs pvzdfe
+                            docker-compose -f dc.yaml logs $service
                             echo "==="
                         fi
                         echo "authorize backend ssh user (test key)"
-                        docker-compose -f dc.yaml exec -T --user backend pvzdfe /tests/setup_backend_ssh_auth.sh
-                        docker-compose -f dc.yaml exec -T --user root pvzdfe /scripts/set_initialized.sh
+                        docker-compose -f dc.yaml exec -T --user backend $service /tests/setup_backend_ssh_auth.sh
+                        docker-compose -f dc.yaml exec -T --user root $service /scripts/set_initialized.sh
                     else
                         echo 'skipping - already setup'
                     fi
                 '''
             }
         }
-        stage('Test: run internal tests: build and run test container (99)') {
+        /*stage('Test: run internal tests: build and run test container (99)') {
             steps {
                 echo 'build test container'
                 sh 'docker-compose -f dc.yaml build pvzdfe-sshtest'
@@ -102,7 +108,7 @@ pipeline {
                     docker-compose -f dc.yaml run -T --rm pvzdfe-sshtest cat /var/log/test_git_client.log
                 '''
             }
-        }
+        } */
         stage('Push ') {
             when {
                 expression { params.pushimage?.trim() != '' }
@@ -120,13 +126,13 @@ pipeline {
     }
     post {
         always {
-            sh '''
+            sh '''#!/bin/bash
                 if [[ "$keep_running" ]]; then
                     echo "Keep container running"
                 else
-                    echo 'Remove container, volumes'
-                    docker-compose -f dc.yaml rm --force -v 2>/dev/null || true
-                    docker rm --force -v shibsp 2>/dev/null || true  # in case docker-compose fails ..
+                    source ./jenkins_scripts.sh
+                    remove_containers
+                    remove_volumes
                 fi
             '''
         }

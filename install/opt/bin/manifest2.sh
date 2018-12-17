@@ -4,7 +4,6 @@
 
 main() {
     _get_system_python_packages                 #  requires pip
-    _get_directorytree_checksum /home/backend   #  requres sha256sum
     _get_directorytree_checksum /opt            #  requres sha256sum
     _get_directorytree_checksum /scripts        #  requres sha256sum
     _get_directorytree_checksum /test*          #  requres sha256sum

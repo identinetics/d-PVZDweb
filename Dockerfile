@@ -34,11 +34,11 @@ RUN chmod +x /scripts/*
 
 # install webapp
 COPY install/PVZDweb/ /opt/PVZDweb/
-RUN mkdir -p /var/log/$CONTAINERUSER \
+RUN mkdir -p /var/log/webapp /var/log/pep \
  && chown -R $CONTAINERUSER:$CONTAINERGROUP /var/log/$CONTAINERUSER \
  && chmod 777 /run
 # export static files to be served from nginx
-VOLUME /opt/PVZDweb/database
+VOLUME /opt/PVZDweb/database /var/log
 EXPOSE 8080
 
 
@@ -61,18 +61,9 @@ RUN groupadd -g $GID $CONTAINERGROUP \
  && chmod 775 /var/lib/git
 VOLUME /var/lib/git
 
-#create backend user (ssh key authorization to be added at runtime)
-RUN adduser --gid $GID --shell /usr/bin/git-shell --home-dir /config/home/backend backend \
- && mkdir /config/home/backend/.ssh /config/home/backend/git-shell-commands \
- && chown backend /config/home/backend/.ssh \
- && chmod 755 /config/home/backend
-COPY install/scripts/no-interactive-login /config/home/backend/git-shell-commands/no-interactive-login
-RUN chmod +x /config/home/backend/git-shell-commands/no-interactive-login
-
 # install tests
 COPY install/tests/* /tests/
 COPY install/testdata-setup /testdata-setup
-COPY install_99/dot_ssh/backend_id_ecdsa.pub /testdata-setup/root/dot_ssh/authorized_keys
 RUN mkdir /testdata-run \
  && chown -R $CONTAINERUSER:$CONTAINERGROUP /testdata* /tests \
  && chmod +x /tests/*
@@ -94,6 +85,7 @@ EXPOSE 2022
 # Need to run as root because of sshd
 # starting processes will drop off root privileges
 CMD /scripts/start.sh
-RUN mkdir -p $HOME/.config/pip \
- && printf "[global]\ndisable-pip-version-check = True\n" > $HOME/.config/pip/pip.conf
 COPY install/opt/bin/manifest2.sh /opt/bin/manifest2.sh
+RUN chmod +x /opt/bin/manifest2.sh \
+ && mkdir -p $HOME/.config/pip \
+ && printf "[global]\ndisable-pip-version-check = True\n" > $HOME/.config/pip/pip.conf

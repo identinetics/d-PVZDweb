@@ -8,4 +8,4 @@ source /opt/PVZDweb/bin/setenv.sh
 
 source /opt/venv/pvzdweb/bin/activate
 
-gunicorn pvzdweb.wsgi:application -c /config/etc/gunicorn/config.py
+gunicorn pvzdweb.wsgi:application -c /config/etc/gunicorn/config.py &
