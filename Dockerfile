@@ -68,19 +68,13 @@ RUN mkdir /testdata-run \
  && chown -R $CONTAINERUSER:$CONTAINERGROUP /testdata* /tests \
  && chmod +x /tests/*
 
-# Prepare git ssh service (postpone key generation to run time!)
-RUN rm -f /etc/ssh/ssh_host_*_key \
- && mkdir -p /opt/etc/ssh \
- && cp -p /etc/ssh/sshd_config /opt/etc/ssh/sshd_config \
- && echo 'GSSAPIAuthentication no' >> /opt/etc/ssh/sshd_config \
- && echo 'useDNS no' >> /opt/etc/ssh/sshd_config \
- && sed -i -e 's/#Port 22/Port 2022/' /opt/etc/ssh/sshd_config \
- && sed -i -e 's/^HostKey \/etc\/ssh\/ssh_host_/HostKey \/opt\/etc\/ssh\/ssh_host_/' /opt/etc/ssh/sshd_config
+# install postgres client (for ready-check)
+RUN yum install -y postgresql \
+ && yum clean all
 
 # The file persistence_status is created in a persistenet volume once the data initialization is complete
 ENV PERSISTENCE_STATUS=/config/etc/ssh/persistence_status
 RUN touch $PERSISTENCE_STATUS
-EXPOSE 2022
 
 # Need to run as root because of sshd
 # starting processes will drop off root privileges

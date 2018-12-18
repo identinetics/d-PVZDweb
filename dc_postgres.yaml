@@ -1,0 +1,40 @@
+# the build number generation in dcshell cannot exclude certain services. Therefore this file is spearated.
+# This postgres service is for CI-testing
+version: "3.4"
+services:
+  postgres:
+    image: postgres:11
+    container_name: postgres
+    labels:
+      x.service: postgres
+    environment:
+      POSTGRES_DB: pvzddb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: changeit
+    networks:
+      dfrontend:
+        ipv4_address: 10.1.2.2
+    restart: unless-stopped
+    volumes:
+      - postgres.data:/var/lib/postgresql/data
+  #pvzdweb-sshtest:
+  #  build:
+  #      context: .
+  #      dockerfile: Dockerfile99.sshtest
+  #  image: r2h2/pvzdweb-sshtest
+  #  container_name: pvzdweb-sshtest
+  #  hostname: pvzdweb-sshtest
+  #  networks:
+  #    dfrontend:
+  #  volumes:
+  #    - pvzdweb-sshtest.log:/var/log:Z
+  #  cap_drop:
+  #    - ALL
+networks:
+  dfrontend:
+    external: true
+volumes:
+    postgres.data:
+        name: postgres.data
+    #pvzdweb-sshtest.log:
+    #    name: pvzdweb-sshtest.log

@@ -49,66 +49,37 @@ pipeline {
                 '''
             }
         }
-        stage('Test: Setup') {
+        stage('Test: setup') {
             steps {
                 echo 'Setup unless already setup and running (keeping previously initialized data) '
                 sh '''#!/bin/bash
                     source jenkins_scripts.sh
                     create_network_dfrontend
-                    # source ./dcshell/dcshell_lib.sh
+                    docker-compose -f dc_postgres.yaml up -d
                     service=pvzdfe
                     container='pvzdweb'
-                    if [[ "$(docker container ls -f name=$container | egrep -v ^CONTAINER)" ]]; then
-                        is_running=0  # running
-                    else
-                        is_running=1  # not running
-                        docker container rm -f $container 2>/dev/null || true # remove any stopped container
-                    fi
-                    if (( $is_running == 0 )); then
-                        docker-compose -f dc.yaml exec -T $service /scripts/is_initialized.sh
-                        is_init=$? # 0=init, 1=not init
-                    else
-                        docker-compose -f dc.yaml run -T --rm $service /scripts/is_initialized.sh
-                        is_init=$?
-                    fi
+                    test_if_running
+                    test_if_initialized
                     if (( $is_init != 0 )); then
-                        echo "setup initial database and testdata"
-                        if (( $is_running == 0 )); then
-                            docker-compose -f dc.yaml exec -T $service /scripts/init_data.py
-                        else
-                            docker-compose -f dc.yaml run -T --rm $service /scripts/init_data.py
-                        fi
+                        load_testdata
                         if (( $is_running == 1 )); then
                             echo "start server"
-                            docker-compose -f dc.yaml up -d $service
-                            sleep 2
-                            echo "=== tail container log"
+                            docker-compose -f dc.yaml up -d $service && sleep 2
                             docker-compose -f dc.yaml logs $service
                             echo "==="
                         fi
-                        echo "authorize backend ssh user (test key)"
-                        docker-compose -f dc.yaml exec -T --user backend $service /tests/setup_backend_ssh_auth.sh
-                        docker-compose -f dc.yaml exec -T --user root $service /scripts/set_initialized.sh
                     else
                         echo 'skipping - already setup'
                     fi
                 '''
             }
         }
-        /*stage('Test: run internal tests: build and run test container (99)') {
+        stage('Test: run ') {
             steps {
-                echo 'build test container'
-                sh 'docker-compose -f dc.yaml build pvzdfe-sshtest'
                 echo 'test webapp'
                 sh 'docker-compose -f dc.yaml exec -T pvzdfe /tests/test_webapp.sh'
-                sh '''
-                    echo "test login with backend ssh key"
-                    docker-compose -f dc.yaml run -T --rm pvzdfe-sshtest /tests/test_git_client.sh
-                    echo "ssh login rc=$?"
-                    docker-compose -f dc.yaml run -T --rm pvzdfe-sshtest cat /var/log/test_git_client.log
-                '''
             }
-        } */
+        }
         stage('Push ') {
             when {
                 expression { params.pushimage?.trim() != '' }

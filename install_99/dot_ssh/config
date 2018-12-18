@@ -1,8 +1,0 @@
-Host pvzdfe_ssh_alias
-    Hostname 10.1.1.39
-    Port 2022
-    User backend
-    IdentityFile ~/.ssh/backend_id_ecdsa
-    PasswordAuthentication no
-    StrictHostKeyChecking no
-    PreferredAuthentications publickey

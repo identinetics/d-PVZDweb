@@ -1,0 +1,31 @@
+version: "3.4"
+services:
+  pvzdpep:
+    build:
+      context: .
+    command: /scripts/start_pep.sh
+    container_name: pvzdpep
+    hostname: pvzdpep
+    image: local/pvzdweb
+    environment:
+      CONTAINERUSER: polman
+    labels:
+      x.service: pvzd_pep
+    networks:
+      dfrontend:
+        ipv4_address: 10.1.2.3
+    restart: unless-stopped
+    volumes:
+      - pvzdweb.config:/config:z
+      - pvzdpep.pepout:/pepout:z
+      - pvzdpep.trustedcerts:/trustedcerts:Z
+networks:
+  dfrontend:
+    external: true
+volumes:
+    pvzdweb.config:
+        name: pvzdweb.config
+    pvzdpep.pepout:
+        name: pvzdpep.pepout
+    pvzdpep.trustedcerts:
+        name: pvzdpep.trustedcerts
