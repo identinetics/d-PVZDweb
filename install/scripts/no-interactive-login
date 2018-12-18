@@ -1,3 +1,0 @@
-#!/bin/sh
-printf '%s\n' "You've successfully authenticated, but I do not provide interactive shell access."
-exit 1

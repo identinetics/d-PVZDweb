@@ -20,14 +20,18 @@ RUN yum -y install https://centos7.iuscommunity.org/ius-release.rpm \
  && ln -sf /usr/bin/pip3.6 /usr/bin/pip3 \
  && yum clean all
 
+# install postgres client (for ready-check)
+RUN yum install -y postgresql \
+ && yum clean all
+
 # install application
 COPY install/PVZDweb /opt/PVZDweb
 RUN pip3.6 install virtualenv \
  && mkdir -p /opt/venv \
  && virtualenv --python=/usr/bin/python3.6 /opt/venv/pvzdweb \
- && touch /root/.profile \
- && printf "\nsource /opt/venv/pvzdweb/bin/activate\n" >> /root/.profile \
- && printf "\nsource /opt/PVZDweb/bin/setenv.sh " >> /root/.profile \
+ && printf "\nsource /opt/venv/pvzdweb/bin/activate" \
+           "\nexport PROJ_HOME=/opt/PVZDweb" \
+           "\nsource /opt/PVZDweb/bin/setenv.sh\n" >> /etc/profile.d/pvzdweb.sh \
  && source /opt/venv/pvzdweb/bin/activate \
  && pip install Cython \
  && pip install -r /opt/PVZDweb/requirements.txt
@@ -44,23 +48,25 @@ VOLUME /opt/PVZDweb/database /var/log
 EXPOSE 8080
 
 
-# persist deployment-specific configuration in /ext/
+# persist deployment-specific configuration
 RUN mkdir -p /config/etc/gunicorn \
              /config/etc/nginx \
              /config/etc/ssh \
              /config/home
 COPY install/etc /config/etc
 COPY install/PVZDweb/static_root /config/pvzdweb/static/static
+# The file persistence_status is created in a persistenet volume once the data initialization is complete
+ENV PERSISTENCE_STATUS=/config/persistence_status
+RUN touch $PERSISTENCE_STATUS
 VOLUME /config
 
-# create container user owning database, git repo + web service processes
+# create container user owning database + web server processes
 ARG CONTAINERUSER=pvzdapp
 ARG CONTAINERUID=343039
-ARG CONTAINERGROUP=repousers
+ARG CONTAINERGROUP=pvzdapp
 ARG GID=$CONTAINERUID
 RUN groupadd -g $GID $CONTAINERGROUP \
- && adduser --gid $GID --uid $CONTAINERUID --home-dir /var/lib/git  $CONTAINERUSER \
- && chmod 775 /var/lib/git
+ && adduser --gid $GID --uid $CONTAINERUID --home-dir /opt/pvzdweb  $CONTAINERUSER
 VOLUME /var/lib/git
 
 # install tests
@@ -70,17 +76,8 @@ RUN mkdir /testdata-run \
  && chown -R $CONTAINERUSER:$CONTAINERGROUP /testdata* /tests \
  && chmod +x /tests/*
 
-# install postgres client (for ready-check)
-RUN yum install -y postgresql \
- && yum clean all
-
-# The file persistence_status is created in a persistenet volume once the data initialization is complete
-ENV PERSISTENCE_STATUS=/config/etc/ssh/persistence_status
-RUN touch $PERSISTENCE_STATUS
-
 # Need to run as root because of sshd
 # starting processes will drop off root privileges
-CMD /scripts/start.sh
 COPY install/opt/bin/manifest2.sh /opt/bin/manifest2.sh
 RUN chmod +x /opt/bin/manifest2.sh \
  && mkdir -p $HOME/.config/pip \

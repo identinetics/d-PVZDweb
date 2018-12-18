@@ -18,7 +18,7 @@ pipeline {
                     else
                         cp dc_webapps.yaml.default dc.yaml
                     fi
-                    head -6 dc.yaml | tail -1
+                    egrep '( image:| container_name:)' dc.yaml
                 '''
             }
         }
@@ -29,6 +29,7 @@ pipeline {
             steps {
                 sh '''#!/bin/bash
                     source ./jenkins_scripts.sh
+                    set_docker_artifact_names
                     remove_containers
                     remove_volumes
                 '''
@@ -49,15 +50,15 @@ pipeline {
             steps {
                 echo 'Setup unless already setup and running (keeping previously initialized data) '
                 sh '''#!/bin/bash
-                    source jenkins_scripts.sh
-                    create_network_dfrontend
+                    source ./jenkins_scripts.sh
+                    set  -xv
+                    set_docker_artifact_names
+                    create_docker_network
                     docker-compose -f dc_postgres.yaml up -d
-                    service=mdreg
-                    container='mdreg'
                     test_if_running
                     test_if_initialized
                     if (( $is_init != 0 )); then
-                        wait_pg_become_ready.sh
+                        /opt/PVZDweb/pvzdweb/wait_pg_become_ready.sh
                         load_testdata
                         if (( $is_running == 1 )); then
                             echo "start server"

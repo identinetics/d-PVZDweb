@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
 
+set_docker_artifact_names() {
+    COMPOSE_PROJECT_NAME='dc' # prefix for containers when using docker-compse RUN and volumes without explicit name clause
+    container='mdreg'
+    network='dfrontend'
+    service='mdreg'
 
-create_network_dfrontend() {
-    nw='dfrontend'
-    network_found=$(docker network ls | grep $nw)
+}
+
+create_docker_network() {
+    network_found=$(docker network ls  --format '{{.Name}}' --filter name=$network)
     if [[ ! "$network_found" ]]; then
         docker network create --driver bridge --subnet=10.1.2.0/24 \
-            -o com.docker.network.bridge.name=br-$nw $nw
+            -o com.docker.network.bridge.name=br-$network $network
     fi
 }
 
@@ -15,9 +21,9 @@ load_testdata() {
     echo "load initial testdata"
     ttyopt=''; [[ -t 0 ]] && ttyopt='-T'  # autodetect tty
     if (( $is_running == 0 )); then
-        docker-compose -f dc.yaml exec $ttyopt $service /scripts/init_data.py
+        docker-compose -f dc.yaml exec $ttyopt $service /tests/load_data.sh
     else
-        docker-compose -f dc.yaml run $ttyopt --rm $service /scripts/init_data.py
+        docker-compose -f dc.yaml run $ttyopt --rm $service /tests/load_data.sh
     fi
 }
 
@@ -37,8 +43,8 @@ load_yaml_config() {
 
 
 remove_containers() {
-    for cont in 'mdreg' 'dpvzdweb_mdreg_run_1', 'postgres'; do
-        container_found=$(docker container ls --format '{{.Names}}' | grep ^$cont$)
+    for cont in 'mdreg' 'dc_mdreg_run_1' 'postgres'; do
+        container_found=$(docker container ls --format '{{.Names}}' | egrep ^$cont$)
         if [[ "$container_found" ]]; then
             docker container rm -f $cont -v
         fi
