@@ -14,11 +14,9 @@ pipeline {
                 sh '''
                    if [[ "$DOCKER_REGISTRY_USER" ]]; then
                         echo "  Docker registry user: $DOCKER_REGISTRY_USER"
-                        ./dcshell/update_config.sh dc.yaml.default > dc.yaml
-                        ./dcshell/update_config.sh dc-setup.yaml.default > dc-setup.yaml
+                        ./dcshell/update_config.sh dc_webapps.yaml.default dc.yaml
                     else
-                        cp dc.yaml.default dc.yaml
-                        cp dc-setup.yaml.default dc-setup.yaml
+                        cp dc_webapps.yaml.default dc.yaml
                     fi
                     head -6 dc.yaml | tail -1
                 '''
@@ -29,7 +27,7 @@ pipeline {
                 expression { params.$start_clean?.trim() != '' }
             }
             steps {
-                sh '''#!/bin/bash -xv
+                sh '''#!/bin/bash
                     source ./jenkins_scripts.sh
                     remove_containers
                     remove_volumes
@@ -42,8 +40,6 @@ pipeline {
                     [[ "$nocache" ]] && nocacheopt='-c' && echo 'build with option nocache'
                     export MANIFEST_SCOPE='local'
                     export PROJ_HOME='.'
-                    #TODO checkout pvzdlib
-
                     ./dcshell/build -f dc.yaml $nocacheopt || \
                         (rc=$?; echo "build failed with rc rc?"; exit $rc)
                 '''
@@ -56,11 +52,12 @@ pipeline {
                     source jenkins_scripts.sh
                     create_network_dfrontend
                     docker-compose -f dc_postgres.yaml up -d
-                    service=pvzdfe
-                    container='pvzdweb'
+                    service=mdreg
+                    container='mdreg'
                     test_if_running
                     test_if_initialized
                     if (( $is_init != 0 )); then
+                        wait_pg_become_ready.sh
                         load_testdata
                         if (( $is_running == 1 )); then
                             echo "start server"
@@ -77,7 +74,7 @@ pipeline {
         stage('Test: run ') {
             steps {
                 echo 'test webapp'
-                sh 'docker-compose -f dc.yaml exec -T pvzdfe /tests/test_webapp.sh'
+                sh 'docker-compose -f dc.yaml exec -T mdreg /tests/test_webapp.sh'
             }
         }
         stage('Push ') {

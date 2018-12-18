@@ -1,8 +1,43 @@
 #!/usr/bin/env bash
 
 
+create_network_dfrontend() {
+    nw='dfrontend'
+    network_found=$(docker network ls | grep $nw)
+    if [[ ! "$network_found" ]]; then
+        docker network create --driver bridge --subnet=10.1.2.0/24 \
+            -o com.docker.network.bridge.name=br-$nw $nw
+    fi
+}
+
+
+load_testdata() {
+    echo "load initial testdata"
+    ttyopt=''; [[ -t 0 ]] && ttyopt='-T'  # autodetect tty
+    if (( $is_running == 0 )); then
+        docker-compose -f dc.yaml exec $ttyopt $service /scripts/init_data.py
+    else
+        docker-compose -f dc.yaml run $ttyopt --rm $service /scripts/init_data.py
+    fi
+}
+
+
+load_yaml_config() {
+    set -e
+    check_python3
+    # config.py will create 'export X=Y' statements on stdout; source it by executing the subshell
+    tmpfile="/tmp/dcshell-build${$}"
+    $($DCSHELL_HOME/config.py $projdir_opt \
+        -k container_name -k image -k container_name -k build.dockerfile $dc_opt_prefixed) \
+        > $tmpfile
+    source $tmpfile
+    set +e
+    rm -f $$tmpfile
+}
+
+
 remove_containers() {
-    for cont in 'pvzdweb' 'postgres'; do
+    for cont in 'mdreg' 'dpvzdweb_mdreg_run_1', 'postgres'; do
         container_found=$(docker container ls --format '{{.Names}}' | grep ^$cont$)
         if [[ "$container_found" ]]; then
             docker container rm -f $cont -v
@@ -25,16 +60,6 @@ remove_volumes() {
 }
 
 
-create_network_dfrontend() {
-    nw='dfrontend'
-    network_found=$(docker network ls | grep $nw)
-    if [[ ! "$network_found" ]]; then
-        docker network create --driver bridge --subnet=10.1.2.0/24 \
-            -o com.docker.network.bridge.name=br-$nw $nw
-    fi
-}
-
-
 test_if_running() {
     if [[ "$(docker container ls -f name=$container | egrep -v ^CONTAINER)" ]]; then
         is_running=0  # running
@@ -46,23 +71,13 @@ test_if_running() {
 
 
 test_if_initialized() {
+    ttyopt=''; [[ -t 0 ]] && ttyopt='-T'  # autodetect tty
     if (( $is_running == 0 )); then
-        docker-compose -f dc.yaml exec -T $service /scripts/is_initialized.sh
+        docker-compose -f dc.yaml exec $ttyopt $service /scripts/is_initialized.sh
         is_init=$? # 0=init, 1=not init
     else
-        docker-compose -f dc.yaml run -T --rm $service /scripts/is_initialized.sh
+        docker-compose -f dc.yaml run $ttyopt --rm $service /scripts/is_initialized.sh
         is_init=$?
-    fi
-}
-
-
-load_testdata() {
-    echo "set database credentials for CLi client"
-    echo "load initial testdata"
-    if (( $is_running == 0 )); then
-        docker-compose -f dc.yaml exec -T $service /scripts/init_data.py
-    else
-        docker-compose -f dc.yaml run -T --rm $service /scripts/init_data.py
     fi
 }
 

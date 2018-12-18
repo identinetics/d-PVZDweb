@@ -15,7 +15,9 @@ ENV JAVA_HOME=/etc/alternatives/java_sdk_1.8.0 \
 
 # install python3.6 (required minimum for this Django app)
 RUN yum -y install https://centos7.iuscommunity.org/ius-release.rpm \
-    && yum -y install python36u python36u-setuptools python36u-devel python36u-pip \
+ && yum -y install python36u python36u-setuptools python36u-devel python36u-pip \
+ && ln -sf /usr/bin/python3.6 /usr/bin/python3 \
+ && ln -sf /usr/bin/pip3.6 /usr/bin/pip3 \
  && yum clean all
 
 # install application
