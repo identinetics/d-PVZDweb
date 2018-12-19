@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # make a bare repo into repodir_bare
 # clone it to repodir_upload, and add the directory structure

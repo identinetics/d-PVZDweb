@@ -1,0 +1,26 @@
+# Deployment Configuration Contract
+
+This document defines application dependencies that controlled by the deployment.
+
+# Application dependencies
+
+All (bash and python) scripts can be called from anywhere,
+and load project resources relative to their filesystem position.
+
+|---
+| Requirement | Implementation (Docker/RHEL7)
+| Python virtual env | /etc/profiles.d/pvzdweb.sh
+| Web server | gunicorn, nginx for static contents -> tests/start_webapp.py
+| Database | defaulted from PVZDweb/pvzdweb/settings.py -> DATABASES: overwrite!
+| App settings | defaulted from PVZDweb/pvzdweb/settings.py -> PVZD_SETTINGS: overwrite!
+|  |
+|  |
+|---
+
+
+# Application constants, not configurable on deployment level
+
+JAVA_HOME (defaults to common OpenJDK values for RHEL7, CentOS7 and macOS)
+DYLD_LIBRARY_PATH (macOS only)
+CLASS_PATH
+PYTHONPATH

@@ -1,0 +1,77 @@
+# Baseline config - requires additional config for command and django settings
+version: "3.5"
+services:
+  allapps:
+    # this service has all apps installed for setup and data loading
+    build:
+      context: .
+    image: local/pvzdweb
+    container_name: allapps
+    hostname: allapps
+    command: /bin/bash -l
+    environment:
+      DJANGO_SETTINGS_MODULE: pvzdweb.settings_allapps
+      PGHOST: postgres_ci
+    networks:
+      jenkins:
+    volumes:
+      - pvzdweb.config:/config:Z
+      - mdreg.var_log:/var/log:Z
+      - pvzdweb.settings:/opt/PVZDweb/pvzdweb:Z
+
+  fedop:
+    image: local/pvzdweb
+    container_name: fedop
+    hostname: fedop
+    command: /scripts/start_webapps.sh
+    environment:
+      DJANGO_SETTINGS_MODULE: pvzdweb.settings_fedop
+    restart: unless-stopped
+    networks:
+      jenkins:
+    volumes:
+      - pvzdweb.config:/config:Z
+      - mdreg.var_log:/var/log:Z
+      - pvzdweb.settings:/opt/PVZDweb/pvzdweb:Z
+
+  portaladmin:
+    image: local/pvzdweb
+    container_name: portaladmin
+    hostname: portaladmin
+    command: /scripts/start_webapps.sh
+    environment:
+      DJANGO_SETTINGS_MODULE: pvzdweb.settings_portaladmin
+    restart: unless-stopped
+    networks:
+      jenkins:
+    volumes:
+      - pvzdweb.config:/config:Z
+      - mdreg.var_log:/var/log:Z
+      - pvzdweb.settings:/opt/PVZDweb/pvzdweb:Z
+
+  tnadmin:
+    image: local/pvzdweb
+    container_name: tnadmin
+    hostname: tnadmin
+    command: /scripts/start_webapps.sh
+    environment:
+      DJANGO_SETTINGS_MODULE: pvzdweb.settings_tnadmin
+    restart: unless-stopped
+    networks:
+      jenkins:
+    volumes:
+      - pvzdweb.config:/config:Z
+      - mdreg.var_log:/var/log:Z
+      - pvzdweb.settings:/opt/PVZDweb/pvzdweb:Z
+
+networks:
+  jenkins:
+    name: jenkins
+
+volumes:
+  pvzdweb.config:
+    name: pvzdweb.config
+  mdreg.var_log:
+    name: mdreg.var_log
+  pvzdweb.settings:
+    name: pvzdweb.settings

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # show main processes
 echo "show container processes (expect nginx, lighthttpd, python3/webapp.py and sshd)"

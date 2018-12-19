@@ -1,96 +1,125 @@
-#!/usr/bin/env bash
-
-set_docker_artifact_names() {
-    COMPOSE_PROJECT_NAME='dc' # prefix for containers when using docker-compse RUN and volumes without explicit name clause
-    container='mdreg'
-    network='dfrontend'
-    service='mdreg'
-
-}
-
-create_docker_network() {
-    network_found=$(docker network ls  --format '{{.Name}}' --filter name=$network)
-    if [[ ! "$network_found" ]]; then
-        docker network create --driver bridge --subnet=10.1.2.0/24 \
-            -o com.docker.network.bridge.name=br-$network $network
-    fi
-}
-
+#!/bin/bash -exv
+PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
 
 load_testdata() {
-    echo "load initial testdata"
-    ttyopt=''; [[ -t 0 ]] && ttyopt='-T'  # autodetect tty
-    if (( $is_running == 0 )); then
-        docker-compose -f dc.yaml exec $ttyopt $service $PROJ_HOME/tests/load_data.sh
+    local compose_cfg=$1
+    local rc=0
+    echo "load testdata"
+    nottyopt=''; [[ -t 0 ]] || nottyopt='-T'  # autodetect tty
+    #docker-compose -f $compose_cfg $projopt run --rm $service bash -l \
+    #    -c '>&2echo "test echo stderr, pty"' || true
+    #docker-compose -f $compose_cfg $projopt run --rm $service bash -l \
+    #    -c 'echo "test echo stdout, pty"' || true
+    #docker-compose -f $compose_cfg $projopt run -T --rm $service bash -l \
+    #    -c '>&2echo "test echo stderr, nopty' || true
+    #docker-compose -f $compose_cfg $projopt run -T --rm $service bash -l \
+    #    -c 'echo "test echo stdout, nopty' || true
+    docker-compose -f $compose_cfg $projopt run $nottyopt --rm $service bash -l \
+        -c '/tests/load_data.sh' || rc=$?
+    echo "load testdata complete with rc=${rc}"
+    return $rc
+}
+
+
+make_postgres_running() {
+    local rc=0
+    echo 'assure that postgres is up'
+    docker-compose $projopt -f dc_postgres.yaml --no-ansi up -d || rc=$?
+    if ((rc>0)); then
+        echo "'docker-compose -f dc_postgres.yaml up' failed with code=${rc}"
+        return $rc
+    fi
+    sleep 2
+    local pg_is_running=$(test_if_running $pg_container)
+    if [[ ! "$pg_is_running" ]]; then
+        echo "${pg_container} not running"
+        return 1
     else
-        docker-compose -f dc.yaml run $ttyopt --rm $service $PROJ_HOME/tests/load_data.sh
+        echo "${pg_container} running"
     fi
 }
 
 
-load_yaml_config() {
-    set -e
-    check_python3
-    # config.py will create 'export X=Y' statements on stdout; source it by executing the subshell
-    tmpfile="/tmp/dcshell-build${$}"
-    $($DCSHELL_HOME/config.py $projdir_opt \
-        -k container_name -k image -k container_name -k build.dockerfile $dc_opt_prefixed) \
-        > $tmpfile
-    source $tmpfile
-    set +e
-    rm -f $$tmpfile
+remove_container_if_not_running() {
+    echo 'remove container if no running'
+    local status=$(docker container inspect -f '{{.State.Status}}' $container 2>/dev/null || echo '')
+    if [[ "$status" ]]; then
+        docker container rm -f $container >/dev/null 2>&1 || true # remove any stopped container
+    fi
 }
 
 
 remove_containers() {
-    for cont in 'mdreg' 'dc_mdreg_run_1' 'postgres'; do
-        container_found=$(docker container ls --format '{{.Names}}' | egrep ^$cont$)
+    echo 'remove containers'
+    for cont in $*; do
+        local container_found=$(docker container inspect -f '{{.Name}}' $cont 2>/dev/null || true)
         if [[ "$container_found" ]]; then
-            docker container rm -f $cont -v
+            docker container rm -f $container_found -v |  perl -pe 'chomp; print " removed\n"'
         fi
     done
 }
 
 
 remove_volumes() {
-    for vol in 'postgres.data' \
-               'pvzdweb.config' \
-               'pvzdweb.var_lib_git' \
-               'pvzdweb.var_log' \
-               'pvzdweb.opt_PVZDweb_database'
-    do
-        volume_found=$(docker volume ls --format '{{.Name}}' | egrep ^$vol$)
+    echo 'removing volumes'
+    for vol in $*; do
+        volume_found=$(docker volume ls --format '{{.Name}}' --filter name=^$vol$)  # fail job on command error
         if [[ "$volume_found" ]]; then
-            docker volume rm $vol
+            docker volume rm $vol |  perl -pe 'chomp; print " removed\n"'
         fi
     done
 }
 
 
 test_if_running() {
-    if [[ "$(docker container ls -f name=$container | egrep -v ^CONTAINER)" ]]; then
-        is_running=0  # running
-    else
-        is_running=1  # not running
-        docker container rm -f $container 2>/dev/null || true # remove any stopped container
+    local cont=$1
+    local status=$(docker container inspect -f '{{.State.Status}}' $cont 2>/dev/null || echo '')
+    if [[ "$status" == "running" ]]; then
+        echo 'running'
     fi
 }
 
 
-test_if_initialized() {
-    ttyopt=''; [[ -t 0 ]] && ttyopt='-T'  # autodetect tty
-    if (( $is_running == 0 )); then
-        docker-compose -f dc.yaml exec $ttyopt $service /scripts/is_initialized.sh
-        is_init=$? # 0=init, 1=not init
+verify_python_env() {
+    local compose_cfg=$1
+    local rc=0
+    echo 'verifying python env'
+    nottyopt=''; [[ -t 0 ]] || nottyopt='-T'  # autodetect tty
+    docker-compose -f $compose_cfg -p 'dc' run $nottyopt --rm $service bash -l \
+        -c 'python /tests/test_python_env.py /opt/PVZDweb/requirements.txt' || rc=$?
+}
+
+
+wait_for_container_up() {
+    local l_container
+    [[ "$1" ]] && l_container=$1 || l_container=$container
+    [[ "$2" ]] && wait_max_seconds=$1 || wait_max_seconds=10
+    echo "waiting for container status=up"
+    local status=''
+    until [[ "${status}" == 'running' ]] || (( wait_max_seconds == 0 )); do
+        wait_max_seconds=$((wait_max_seconds-=1))
+        printf '.'
+        sleep 1
+        status=$(docker container inspect -f '{{.State.Status}}' $l_container 2>/dev/null || echo '')
+    done
+    if [[ "${status}" == 'running' ]]; then
+        echo "Container $container up"
+        return 0
     else
-        docker-compose -f dc.yaml run $ttyopt --rm $service /scripts/is_initialized.sh
-        is_init=$?
+        echo "Container $container not running, status=${status}\n"
+        return 1
     fi
 }
 
 
 wait_for_database() {
-    if (( $is_running > 0 )); then
-        docker-compose -f dc.yaml run $ttyopt --rm $service bash /opt/PVZDweb/pvzdweb/wait_pg_become_ready.sh
+    local compose_cfg=$1
+    local rc=0
+    echo "waiting for database to be ready"
+    docker-compose -f $compose_cfg -p 'dc' run --rm $service bash -l \
+        -c '/opt/PVZDweb/bin/wait_pg_become_ready.sh' || rc=$?
+    if ((rc>0)); then
+        echo "Database unavailable"
+        return $rc
     fi
 }

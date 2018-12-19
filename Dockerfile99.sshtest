@@ -1,9 +1,0 @@
-FROM intra/centos7_py34_base
-
-COPY install_99/test_git_client.sh /tests/
-COPY install_99/dot_ssh/* /root/.ssh/
-RUN chmod +x /tests/* \
- && yum install openssh-clients -y \
- && mkdir -p /root/.ssh \
- && chmod 700 /root/.ssh \
- && chmod 600 /root/.ssh/*

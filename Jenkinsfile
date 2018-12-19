@@ -1,24 +1,35 @@
 pipeline {
     agent any
+    environment {
+        compose_cfg='docker-compose.yaml'
+        compose_f_opt=''
+        container='allapps'
+        pg_container='postgres_ci'
+        d_containers="${container} dc_${container}_run_1 postgres_ci ${pg_container} fedop portaladmin tnadmin"
+        d_volumes='postgres_ci.data pvzdweb.config pvzdweb.var_lib_git pvzdweb.var_log pvzdweb.settings'
+        service='allapps'
+        projopt='-p jenkins'
+    }
     options { disableConcurrentBuilds() }
     parameters {
         string(defaultValue: 'True', description: '"True": initial cleanup: remove container and volumes; otherwise leave empty', name: 'start_clean')
-        string(description: '"True": "Set --nocache for docker build; otherwise leave empty', name: 'nocache')
-        string(description: '"True": push docker image after build; otherwise leave empty', name: 'pushimage')
-        string(description: '"True": keep running after test; otherwise leave empty to delete container and volumes', name: 'keep_running')
+        string(defaultValue: '', description: '"True": "Set --nocache for docker build; otherwise leave empty', name: 'nocache')
+        string(defaultValue: '', description: '"True": push docker image after build; otherwise leave empty', name: 'pushimage')
+        string(defaultValue: '', description: '"True": keep running after test; otherwise leave empty to delete container and volumes', name: 'keep_running')
     }
 
     stages {
         stage('Config ') {
             steps {
-                sh '''
-                   if [[ "$DOCKER_REGISTRY_USER" ]]; then
+                sh '''#!/bin/bash -e
+                    echo "using ${compose_cfg} as docker-compose config file"
+                    if [[ "$DOCKER_REGISTRY_USER" ]]; then
                         echo "  Docker registry user: $DOCKER_REGISTRY_USER"
-                        ./dcshell/update_config.sh dc_webapps.yaml.default dc.yaml
+                        ./dcshell/update_config.sh "${compose_cfg}.default" $compose_cfg
                     else
-                        cp dc_webapps.yaml.default dc.yaml
+                        cp "${compose_cfg}.default" $compose_cfg
                     fi
-                    egrep '( image:| container_name:)' dc.yaml
+                    egrep '( image:| container_name:)' $compose_cfg || echo "missing keys in ${compose_cfg}"
                 '''
             }
         }
@@ -27,21 +38,25 @@ pipeline {
                 expression { params.$start_clean?.trim() != '' }
             }
             steps {
-                sh '''#!/bin/bash
+                sh '''#!/bin/bash -e
                     source ./jenkins_scripts.sh
-                    set_docker_artifact_names
-                    remove_containers
-                    remove_volumes
+                    remove_containers $d_containers && echo '.'
+                    remove_volumes $d_volumes && echo '.'
                 '''
             }
         }
         stage('Build') {
             steps {
-                sh '''#!/bin/bash
-                    [[ "$nocache" ]] && nocacheopt='-c' && echo 'build with option nocache'
+                sh '''#!/bin/bash -e
+                    source ./jenkins_scripts.sh
+                    remove_container_if_not_running
+                    if [[ "$nocache" ]]; then
+                         nocacheopt='-c'
+                         echo 'build with option nocache'
+                    fi
                     export MANIFEST_SCOPE='local'
                     export PROJ_HOME='.'
-                    ./dcshell/build -f dc.yaml $nocacheopt || \
+                    ./dcshell/build $compose_f_opt $nocacheopt || \
                         (rc=$?; echo "build failed with rc rc?"; exit $rc)
                 '''
             }
@@ -49,34 +64,39 @@ pipeline {
         stage('Test: setup') {
             steps {
                 echo 'Setup unless already setup and running (keeping previously initialized data) '
-                sh '''#!/bin/bash
+                sh '''#!/bin/bash -e
                     source ./jenkins_scripts.sh
-                    set  -xv
-                    set_docker_artifact_names
-                    create_docker_network
-                    docker-compose -f dc_postgres.yaml up -d
-                    set +e
-                    test_if_running
-                    test_if_initialized
-                    if (( $is_init != 0 )); then
-                        wait_for_database
-                        load_testdata
-                        if (( $is_running == 1 )); then
-                            echo "start server"
-                            docker-compose -f dc.yaml up -d $service && sleep 2
-                            docker-compose -f dc.yaml logs $service
-                            echo "==="
-                        fi
-                    else
-                        echo 'skipping - already setup'
+                    is_running=$(test_if_running $container)
+                    if [[ ! "$is_running" ]]; then
+                        verify_python_env $compose_cfg
+                        make_postgres_running
+                        wait_for_database $compose_cfg || echo '(ignore condition - continue job)'
+                        load_testdata $compose_cfg
+                        echo "start server"
+                        docker-compose $projop $compose_f_opt --no-ansi up -d tnadmin && echo ''
+                    elif [[ ! "$start_clean" ]]; then
+                        echo 'container already running: restart using the existing volumes'
+                        docker-compose $projop $compose_f_opt down
+                        docker-compose $projop $compose_f_opt --no-ansi up -d tnadmin && echo ''
                     fi
+                    wait_for_container_up tnadmin
                 '''
             }
         }
-        stage('Test: run ') {
+        stage('Test: run') {
             steps {
                 echo 'test webapp'
-                sh 'docker-compose -f dc.yaml exec -T mdreg /tests/test_webapp.sh'
+                sh '''#!/bin/bash -e
+                    nottyopt=''; [[ -t 0 ]] || nottyopt='-T'  # autodetect tty
+                    cmd="docker-compose $projop $compose_f_opt exec $nottyopt tnadmin /tests/test_webapp.sh"
+                    echo $cmd; $cmd || rc=$?
+                    if ((rc==0)); then
+                        echo "test OK"
+                    else
+                        echo "test failed"
+                        exit 1
+                    fi
+                '''
             }
         }
         stage('Push ') {
@@ -84,25 +104,25 @@ pipeline {
                 expression { params.pushimage?.trim() != '' }
             }
             steps {
-                sh '''
+                sh '''#!/bin/bash -e
                     default_registry=$(docker info 2> /dev/null |egrep '^Registry' | awk '{print $2}')
                     echo "  Docker default registry: $default_registry"
                     export MANIFEST_SCOPE='local'
                     export PROJ_HOME='.'
-                    ./dcshell/build -f dc.yaml -P
+                    ./dcshell/build $compose_f_opt -P
                 '''
             }
         }
     }
     post {
         always {
-            sh '''#!/bin/bash
+            sh '''#!/bin/bash -e
                 if [[ "$keep_running" ]]; then
                     echo "Keep container running"
                 else
                     source ./jenkins_scripts.sh
-                    remove_containers
-                    remove_volumes
+                    remove_containers $d_containers && echo 'containers removed'
+                    remove_volumes $d_volumes && echo 'volumes removed'
                 fi
             '''
         }

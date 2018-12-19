@@ -1,5 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
-cd $PROJ_HOME
-python fedop/tests/load_db_with_testdata.py
-python portaladmin/tests/load_db_with_testdata.py
+source /etc/profile.d/pvzdweb.sh
+/opt/PVZDweb/bin/load_testdata.sh
