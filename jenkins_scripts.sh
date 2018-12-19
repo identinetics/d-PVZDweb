@@ -21,9 +21,9 @@ load_testdata() {
     echo "load initial testdata"
     ttyopt=''; [[ -t 0 ]] && ttyopt='-T'  # autodetect tty
     if (( $is_running == 0 )); then
-        docker-compose -f dc.yaml exec $ttyopt $service /tests/load_data.sh
+        docker-compose -f dc.yaml exec $ttyopt $service $PROJ_HOME/tests/load_data.sh
     else
-        docker-compose -f dc.yaml run $ttyopt --rm $service /tests/load_data.sh
+        docker-compose -f dc.yaml run $ttyopt --rm $service $PROJ_HOME/tests/load_data.sh
     fi
 }
 
@@ -50,6 +50,7 @@ remove_containers() {
         fi
     done
 }
+
 
 remove_volumes() {
     for vol in 'postgres.data' \
@@ -87,3 +88,9 @@ test_if_initialized() {
     fi
 }
 
+
+wait_for_database() {
+    if (( $is_running > 0 )); then
+        docker-compose -f dc.yaml run $ttyopt --rm $service bash /opt/PVZDweb/pvzdweb/wait_pg_become_ready.sh
+    fi
+}

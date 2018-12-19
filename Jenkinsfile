@@ -55,10 +55,11 @@ pipeline {
                     set_docker_artifact_names
                     create_docker_network
                     docker-compose -f dc_postgres.yaml up -d
+                    set +e
                     test_if_running
                     test_if_initialized
                     if (( $is_init != 0 )); then
-                        /opt/PVZDweb/pvzdweb/wait_pg_become_ready.sh
+                        wait_for_database
                         load_testdata
                         if (( $is_running == 1 )); then
                             echo "start server"

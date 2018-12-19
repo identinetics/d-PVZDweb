@@ -31,7 +31,7 @@ RUN pip3.6 install virtualenv \
  && virtualenv --python=/usr/bin/python3.6 /opt/venv/pvzdweb \
  && printf "\nsource /opt/venv/pvzdweb/bin/activate" \
            "\nexport PROJ_HOME=/opt/PVZDweb" \
-           "\nsource /opt/PVZDweb/bin/setenv.sh\n" >> /etc/profile.d/pvzdweb.sh \
+           "\nsource /opt/PVZDweb/bin/setenv.sh\n" > /etc/profile.d/pvzdweb.sh \
  && source /opt/venv/pvzdweb/bin/activate \
  && pip install Cython \
  && pip install -r /opt/PVZDweb/requirements.txt
@@ -82,3 +82,5 @@ COPY install/opt/bin/manifest2.sh /opt/bin/manifest2.sh
 RUN chmod +x /opt/bin/manifest2.sh \
  && mkdir -p $HOME/.config/pip \
  && printf "[global]\ndisable-pip-version-check = True\n" > $HOME/.config/pip/pip.conf
+
+SHELL ["/bin/bash", "-l", "-c"]
