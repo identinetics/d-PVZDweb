@@ -3,6 +3,13 @@ services:
   postgres_ci:
     image: postgres:11
     container_name: postgres_ci
+    #deploy:
+    #  placement:
+    #    constraints:
+    #      - node.hostname == nc8
+    #  replicas: 1
+    #  restart_policy:
+    #    condition: on-failure
     environment:
       POSTGRES_DB: pvzddb
       POSTGRES_USER: postgres
@@ -20,3 +27,4 @@ networks:
 volumes:
   postgres_ci.data:
     name: postgres_ci.data
+

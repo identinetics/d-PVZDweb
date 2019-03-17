@@ -5,6 +5,13 @@ services:
     # this service has all apps installed for setup and data loading
     build:
       context: .
+    #deploy:
+    #  placement:
+    #    constraints:
+    #      - node.hostname == nc8
+    #  replicas: 1
+    #  restart_policy:
+    #    condition: on-failure
     image: local/pvzdweb
     container_name: allapps
     hostname: allapps
@@ -22,8 +29,14 @@ services:
   fedop:
     image: local/pvzdweb
     container_name: fedop
-    hostname: fedop
     command: /scripts/start_webapps.sh
+    #deploy:
+    #  placement:
+    #    constraints:
+    #      - node.hostname == nc8
+    #  replicas: 1
+    #  restart_policy:
+    #    condition: on-failure
     environment:
       DJANGO_SETTINGS_MODULE: pvzdweb.settings_fedop
     restart: unless-stopped
@@ -37,8 +50,14 @@ services:
   portaladmin:
     image: local/pvzdweb
     container_name: portaladmin
-    hostname: portaladmin
     command: /scripts/start_webapps.sh
+    #deploy:
+    #  placement:
+    #    constraints:
+    #      - node.hostname == nc8
+    #  replicas: 1
+    #  restart_policy:
+    #    condition: on-failure
     environment:
       DJANGO_SETTINGS_MODULE: pvzdweb.settings_portaladmin
     restart: unless-stopped
@@ -52,7 +71,13 @@ services:
   tnadmin:
     image: local/pvzdweb
     container_name: tnadmin
-    hostname: tnadmin
+    #deploy:
+    #  placement:
+    #    constraints:
+    #      - node.hostname == nc8
+    #  replicas: 1
+    #  restart_policy:
+    #    condition: on-failure
     command: /scripts/start_webapps.sh
     environment:
       DJANGO_SETTINGS_MODULE: pvzdweb.settings_tnadmin
@@ -67,6 +92,8 @@ services:
 networks:
   jenkins:
     name: jenkins
+    # driver: overlay
+    # attachable: true
 
 volumes:
   pvzdweb.config:

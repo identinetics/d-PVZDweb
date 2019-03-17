@@ -4,3 +4,6 @@
 [submodule "install/PVZDweb"]
 	path = install/PVZDweb
 	url = https://github.com/identinetics/PVZDweb
+[submodule "install/seclay_xmlsig_proxy"]
+	path = install/seclay_xmlsig_proxy
+	url = https://github.com/identinetics/seclay_xmlsig_proxy
