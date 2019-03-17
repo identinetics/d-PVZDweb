@@ -31,9 +31,7 @@ RUN pip3.6 install virtualenv \
  && source /opt/venv/pvzdweb/bin/activate \
  && pip install Cython \
  && pip install -r /opt/PVZDweb/requirements.txt
-COPY install/scripts/* /scripts/
 COPY install/etc/profile.d/pvzdweb.sh /etc/profile.d/pvzdweb.sh
-RUN chmod +x /scripts/*
 
 # install sig proxy
 COPY install/seclay_xmlsig_proxy /opt/seclay_xmlsig_proxy
@@ -41,10 +39,9 @@ RUN virtualenv --python=/usr/bin/python3.6 /opt/venv/sigproxy \
  && source /opt/venv/sigproxy/bin/activate \
  && pip install -r /opt/seclay_xmlsig_proxy/requirements.txt
 
-# persist deployment-specific configuration
-RUN mkdir -p /opt/etc/gunicorn \
-             /opt/etc/nginx
-COPY install/etc /opt/etc
+# install custom config and scripts
+COPY install/opt /opt
+RUN chmod +x /opt/bin/*
 
 # install tests
 COPY install/tests/* /tests/

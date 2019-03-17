@@ -70,8 +70,8 @@ pipeline {
                     if [[ ! "$is_running" ]]; then
                         verify_python_env $compose_cfg
                         make_postgres_running
-                        wait_for_database $compose_cfg || echo '(ignore condition - continue job)'
-                        load_testdata $compose_cfg
+                        wait_for_database $compose_f_opt
+                        load_testdata $compose_f_opt
                         echo "start server"
                         docker-compose $projop $compose_f_opt --no-ansi up -d tnadmin && echo ''
                     elif [[ ! "$start_clean" ]]; then

@@ -2,19 +2,19 @@
 PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
 
 load_testdata() {
-    local compose_cfg=$1
+    local compose_f_opt=$1
     local rc=0
     echo "load testdata"
     nottyopt=''; [[ -t 0 ]] || nottyopt='-T'  # autodetect tty
-    #docker-compose -f $compose_cfg $projopt run --rm $service bash -l \
+    #docker-compose $compose_f_opt $projopt run --rm $service bash -l \
     #    -c '>&2echo "test echo stderr, pty"' || true
-    #docker-compose -f $compose_cfg $projopt run --rm $service bash -l \
+    #docker-compose $compose_f_opt $projopt run --rm $service bash -l \
     #    -c 'echo "test echo stdout, pty"' || true
-    #docker-compose -f $compose_cfg $projopt run -T --rm $service bash -l \
+    #docker-compose $compose_f_opt $projopt run -T --rm $service bash -l \
     #    -c '>&2echo "test echo stderr, nopty' || true
-    #docker-compose -f $compose_cfg $projopt run -T --rm $service bash -l \
+    #docker-compose $compose_f_opt $projopt run -T --rm $service bash -l \
     #    -c 'echo "test echo stdout, nopty' || true
-    docker-compose -f $compose_cfg $projopt run $nottyopt --rm $service bash -l \
+    docker-compose $compose_f_opt $projopt run $nottyopt --rm $service bash -l \
         -c '/tests/load_data.sh' || rc=$?
     echo "load testdata complete with rc=${rc}"
     return $rc
@@ -113,10 +113,10 @@ wait_for_container_up() {
 
 
 wait_for_database() {
-    local compose_cfg=$1
+    local compose_f_opt=$1
     local rc=0
     echo "waiting for database to be ready"
-    docker-compose -f $compose_cfg -p 'dc' run --rm $service bash -l \
+    docker-compose $compose_f_opt -p 'dc' run --rm $service bash -l \
         -c '/opt/PVZDweb/bin/wait_pg_become_ready.sh' || rc=$?
     if ((rc>0)); then
         echo "Database unavailable"
