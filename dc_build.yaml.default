@@ -1,0 +1,7 @@
+version: "3.5"
+services:
+  allapps:
+    build:
+      context: .
+    image: local/pvzdweb
+    container_name: allapps

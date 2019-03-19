@@ -26,8 +26,10 @@ pipeline {
                     if [[ "$DOCKER_REGISTRY_USER" ]]; then
                         echo "  Docker registry user: $DOCKER_REGISTRY_USER"
                         ./dcshell/update_config.sh "${compose_cfg}.default" $compose_cfg
+                        ./dcshell/update_config.sh dc_build.yaml.default dc_build.yaml
                     else
                         cp "${compose_cfg}.default" $compose_cfg
+                        cp dc_build.yaml.default dc_build.yaml
                     fi
                     egrep '( image:| container_name:)' $compose_cfg || echo "missing keys in ${compose_cfg}"
                 '''
@@ -56,7 +58,7 @@ pipeline {
                     fi
                     export MANIFEST_SCOPE='local'
                     export PROJ_HOME='.'
-                    ./dcshell/build $compose_f_opt $nocacheopt || \
+                    ./dcshell/build -f dc_build.yaml $nocacheopt || \
                         (rc=$?; echo "build failed with rc rc?"; exit $rc)
                 '''
             }
@@ -121,8 +123,8 @@ pipeline {
                     echo "Keep container running"
                 else
                     source ./jenkins_scripts.sh
-                    remove_containers $d_containers && echo 'containers removed'
-                    remove_volumes $d_volumes && echo 'volumes removed'
+                    remove_containers $d_containers && echo '.'
+                    remove_volumes $d_volumes && echo '.'
                 fi
             '''
         }

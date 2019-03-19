@@ -1,13 +1,13 @@
-#!/bin/bash -xv
+#!/bin/bash
 PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
 
 # This script must be copied in the docker image to /opt/bin/manifest2.sh (-> Dockerfile)
 
 main() {
     _get_system_python_packages                 #  requires pip
-    _get_directorytree_checksum /opt            #  requres sha256sum
-    _get_directorytree_checksum /scripts        #  requres sha256sum
-    _get_directorytree_checksum /test*          #  requres sha256sum
+    _get_directorytree_checksum /opt/PVZDweb    #  requires sha256sum
+    _get_directorytree_checksum /scripts        #  requires sha256sum
+    _get_directorytree_checksum /test*          #  requires sha256sum
 }
 
 
@@ -32,8 +32,8 @@ _get_singlefile_checksum() {
 
 _get_directorytree_checksum() {
     path=$1
-    find $path -type f -exec sha256sum {} > /tmp/dirtree.checksum
-    awk '{print "FILE::" $2 "==#" substr($1,1,7)}' < /tmp/dirtree.checksum
+    find $path -type f -exec sha256sum {} \; | \
+        awk '{print "FILE::" $2 "==#" substr($1,1,7)}'
 }
 
 main
