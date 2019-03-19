@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/bin/bash -xv
+PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
 
 # This script must be copied in the docker image to /opt/bin/manifest2.sh (-> Dockerfile)
 
@@ -31,7 +32,8 @@ _get_singlefile_checksum() {
 
 _get_directorytree_checksum() {
     path=$1
-    find $path -type f -exec sha256sum {} + | awk '{print "FILE::" $2 "==#" substr($1,1,7)}'
+    find $path -type f -exec sha256sum {} > /tmp/dirtree.checksum
+    awk '{print "FILE::" $2 "==#" substr($1,1,7)}' < /tmp/dirtree.checksum
 }
 
 main
