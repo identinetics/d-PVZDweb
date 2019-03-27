@@ -1,10 +1,10 @@
 # Baseline config - requires additional config for command and django settings
 version: "3.5"
 services:
-  allapps:
-    # this service has all apps installed for setup and data loading
-    build:
-      context: .
+  pvzdweb:
+    image: local/pvzdweb
+    container_name: pvzdweb
+    command: /opt/bin/start_webapps.sh
     #deploy:
     #  placement:
     #    constraints:
@@ -12,75 +12,9 @@ services:
     #  replicas: 1
     #  restart_policy:
     #    condition: on-failure
-    image: local/pvzdweb
-    container_name: allapps
-    hostname: allapps
-    command: /bin/bash -l
     environment:
-      DJANGO_SETTINGS_MODULE: pvzdweb.settings_allapps
+      DJANGO_SETTINGS_MODULE: pvzdweb.settings
       PGHOST: postgres_ci
-    networks:
-      jenkins:
-    volumes:
-      - pvzdweb.config:/config:Z
-      - mdreg.var_log:/var/log:Z
-      - pvzdweb.settings:/opt/PVZDweb/pvzdweb:Z
-
-  fedop:
-    image: local/pvzdweb
-    container_name: fedop
-    command: /scripts/start_webapps.sh
-    #deploy:
-    #  placement:
-    #    constraints:
-    #      - node.hostname == nc8
-    #  replicas: 1
-    #  restart_policy:
-    #    condition: on-failure
-    environment:
-      DJANGO_SETTINGS_MODULE: pvzdweb.settings_fedop
-    restart: unless-stopped
-    networks:
-      jenkins:
-    volumes:
-      - pvzdweb.config:/config:Z
-      - mdreg.var_log:/var/log:Z
-      - pvzdweb.settings:/opt/PVZDweb/pvzdweb:Z
-
-  portaladmin:
-    image: local/pvzdweb
-    container_name: portaladmin
-    command: /scripts/start_webapps.sh
-    #deploy:
-    #  placement:
-    #    constraints:
-    #      - node.hostname == nc8
-    #  replicas: 1
-    #  restart_policy:
-    #    condition: on-failure
-    environment:
-      DJANGO_SETTINGS_MODULE: pvzdweb.settings_portaladmin
-    restart: unless-stopped
-    networks:
-      jenkins:
-    volumes:
-      - pvzdweb.config:/config:Z
-      - mdreg.var_log:/var/log:Z
-      - pvzdweb.settings:/opt/PVZDweb/pvzdweb:Z
-
-  tnadmin:
-    image: local/pvzdweb
-    container_name: tnadmin
-    #deploy:
-    #  placement:
-    #    constraints:
-    #      - node.hostname == nc8
-    #  replicas: 1
-    #  restart_policy:
-    #    condition: on-failure
-    command: /scripts/start_webapps.sh
-    environment:
-      DJANGO_SETTINGS_MODULE: pvzdweb.settings_tnadmin
     restart: unless-stopped
     networks:
       jenkins:

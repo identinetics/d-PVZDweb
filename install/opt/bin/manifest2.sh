@@ -6,7 +6,7 @@ PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
 main() {
     _get_system_python_packages                 #  requires pip
     _get_directorytree_checksum /opt/PVZDweb    #  requires sha256sum
-    _get_directorytree_checksum /scripts        #  requires sha256sum
+    _get_directorytree_checksum /opt/bin        #  requires sha256sum
     _get_directorytree_checksum /test*          #  requires sha256sum
 }
 

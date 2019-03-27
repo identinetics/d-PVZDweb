@@ -33,15 +33,22 @@ Für die Kommunikation mit dem Backend Repo erfolgt über die Postgres-DB.
 
 Dieser Arbeitsschritt orientiert sich am Ablauf des Jenkins Jobs.
 
-Die 4 Instanzen von PVZDweb werden über das Django Settings Modul konfiguriert.
-Dazu muss die Environment-Variable DJANGO_SETTINGS_MODULE im jeweiligen Service im Docker-Compose-File gesetzt werden.
-Dann wird der Container mit einer Shell gestartet, um im Container die Django-Konfiguration anzupassen.
+Die 4 Instanzen von PVZDweb werden über Umgebungsvariablen konfiguriert.
+
+Die Umgebungsvariablen werden in der docker-compose Konfiguration definiert und sind:
+
+    * config.env  (DJANGO_SETTINGS_MODULE, DB- und Netzwerk-Parameter)
+    * secrets.env (Schlüsselmaterial)
+
+
+Dann wird der Container mit einer Shell gestartet, um innerhalb des Containers die Django-Konfiguration anzupassen.
 Sie ist persistent, weil das Verzeichnis /opt/PVZDweb/pvzdweb auf das Docker Volume pvzdweb.settings gemappt ist.
 
 .Django Settings Dateien
 |===
 | DJANGO_SETTINGS_MODULE | Verwendung
-|settings | Grundkonfiguration, wird von den anderen Settings erweitert
+|settings_base | Grundkonfiguration, wird für das Deployment nicht angepasst
+|settings | DB, Debug Mode
 |settings_portaladmin | Portaladmin app
 |settings_fedop | Zugriffsberechtigungen für Portaladmin (PMP)
 |settings_pep | PEP
@@ -64,6 +71,12 @@ In der Django Settings Datei sind folgende Einträge anzupassen:
 | SECRET_KEY |  Installations-spezifischer Zufallswert (`openssl rand -base64 40`)
 |===
 
+== Authentifizierng
+
+Die Authentifizierung erfolgt in der externen Infrastruktur per PVP.
+die Anwendung benötigt die userId in einem HTTP Header.
+Der Name des Headers wird in SigProxyconfig.userid_http_header konfiguriert.
+
 
 == Logging
 
@@ -71,10 +84,9 @@ Die Webanwendung loggt auf stdout/stderr.
 Die Logfiles werden außerhalb des Containers verwaltet, z.B. mit `docker logs` oder einem Logging Driver.
 
 Der nginx-Proxy loggt auf /var/log/nginx.
-Diese Files sind redundant und daher eher unwichtig.
-Mit dem Script /scripts/nginx_logrotate.sh werden die Files rotiert und eine Generation aufbewahrt.
-Das Script kann z.B. täglich aufgerufen werden.
+Diese logs sind weitgehend redundant und daher eher unwichtig.
+Mit dem Script /opt/bin/rotate_logs.sh werden die Files entsprechend logrotate.conf rotiert.
+Das Script sollte täglich aufgerufen werden, z.B.:
 
-== Beispielkonfiguration Webportal
+    docker.compose [-f config] exec <service> /opt/bin/rotate_logs.sh [-v]
 
-Im Verzeichnis shibsp sind Beispiele zu Konfiguration eines PVP2-Proxy.

@@ -3,11 +3,11 @@ pipeline {
     environment {
         compose_cfg='docker-compose.yaml'
         compose_f_opt=''
-        container='allapps'
+        container='pvzdweb'
         pg_container='postgres_ci'
-        d_containers="${container} dc_${container}_run_1 postgres_ci ${pg_container} fedop portaladmin tnadmin"
+        d_containers="${container} dc_${container}_run_1 postgres_ci ${pg_container} pvzdweb "
         d_volumes='postgres_ci.data pvzdweb.config pvzdweb.var_lib_git pvzdweb.var_log pvzdweb.settings'
-        service='allapps'
+        service='pvzdweb'
         projopt='-p jenkins'
     }
     options { disableConcurrentBuilds() }
@@ -31,6 +31,8 @@ pipeline {
                         cp "${compose_cfg}.default" $compose_cfg
                         cp dc_build.yaml.default dc_build.yaml
                     fi
+                    cp -n config.env.default config.env
+                    cp -n secrets.env.default secrets.env
                     egrep '( image:| container_name:)' $compose_cfg || echo "missing keys in ${compose_cfg}"
                 '''
             }
@@ -44,6 +46,8 @@ pipeline {
                     source ./jenkins_scripts.sh
                     remove_containers $d_containers && echo '.'
                     remove_volumes $d_volumes && echo '.'
+                    cp -f config.env.default config.env
+                    cp -f secrets.env.default secrets.env
                 '''
             }
         }
@@ -65,7 +69,7 @@ pipeline {
         }
         stage('Test: setup') {
             steps {
-                echo 'Setup unless already setup and running (keeping previously initialized data) '
+                echo 'Setup unless already setup and running (keeping previously initialized data)'
                 sh '''#!/bin/bash -e
                     source ./jenkins_scripts.sh
                     is_running=$(test_if_running $container)
@@ -73,15 +77,15 @@ pipeline {
                         verify_python_env $compose_cfg
                         make_postgres_running
                         wait_for_database $compose_f_opt
-                        load_testdata $compose_f_opt
+                        load_testdata $compose_f_opt || true # TODO: test for return code when data has been cleaned
                         echo "start server"
-                        docker-compose $projop $compose_f_opt --no-ansi up -d tnadmin && echo ''
+                        docker-compose $projopt $compose_f_opt --no-ansi up -d $container && echo ''
                     elif [[ ! "$start_clean" ]]; then
                         echo 'container already running: restart using the existing volumes'
-                        docker-compose $projop $compose_f_opt down
-                        docker-compose $projop $compose_f_opt --no-ansi up -d tnadmin && echo ''
+                        docker-compose $projopt $compose_f_opt down
+                        docker-compose $projopt $compose_f_opt --no-ansi up -d $container && echo ''
                     fi
-                    wait_for_container_up tnadmin
+                    wait_for_container_up $container
                 '''
             }
         }
@@ -90,7 +94,9 @@ pipeline {
                 echo 'test webapp'
                 sh '''#!/bin/bash -e
                     nottyopt=''; [[ -t 0 ]] || nottyopt='-T'  # autodetect tty
-                    cmd="docker-compose $projop $compose_f_opt exec $nottyopt tnadmin /tests/test_webapp.sh"
+                    cmd="docker-compose $projopt $compose_f_opt exec $nottyopt $container bash -l -c /opt/PVZDweb/bin/pytest_all_noninteractive.sh"
+                    echo $cmd; $cmd || rc=$?
+                    cmd="docker-compose $projopt $compose_f_opt exec $nottyopt $container bash -l -c /tests/test_webapp.sh"
                     echo $cmd; $cmd || rc=$?
                     if ((rc==0)); then
                         echo "test OK"

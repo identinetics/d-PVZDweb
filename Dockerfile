@@ -1,10 +1,10 @@
-FROM intra/centos7_base
+FROM intra/centos7_py36_base
 
 RUN yum -y update \
  && yum -y install java-1.8.0-openjdk-devel.x86_64 \
  && yum -y install gcc gcc-c++ net-tools sudo wget \
  && yum -y install libffi-devel libxslt-devel libxml2 libxml2-devel openssl-devel \
- && yum -y install openldap-devel \
+ && yum -y install openldap-devel python36u-devel \
  && yum -y install epel-release \
  && yum -y install nginx \
  && yum clean all
@@ -12,14 +12,10 @@ ENV JAVA_HOME=/etc/alternatives/java_sdk_1.8.0 \
     JDK_HOME=/etc/alternatives/java_sdk_1.8.0 \
     JRE_HOME=/etc/alternatives/java_sdk_1.8.0/jre
 
-# install python3.6 (required minimum for this Django app)
-RUN yum -y install https://centos7.iuscommunity.org/ius-release.rpm \
- && yum -y install python36u python36u-setuptools python36u-devel python36u-pip \
- && ln -sf /usr/bin/python3.6 /usr/bin/python3 \
- && ln -sf /usr/bin/pip3.6 /usr/bin/pip3 \
+# install postgres client (for ready-check)
+RUN yum install -y postgresql \
  && yum clean all
 
-# install postgres client (for ready-check)
 RUN yum install -y postgresql \
  && yum clean all
 

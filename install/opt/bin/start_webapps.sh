@@ -1,5 +1,6 @@
 #!/bin/bash
 
+scriptdir=$(cd "$(dirname ${BASH_SOURCE[0]})" && pwd)
 
 main() {
     start_appserver
@@ -9,19 +10,19 @@ main() {
 }
 
 
-
-
 start_appserver() {
     # start gunicorn
     # settings.py/INSTALLED_APPS controls which webapps are serviced in this instance
     source /etc/profile.d/pvzdweb.sh
-    gunicorn pvzdweb.wsgi:application -c /opt/etc/gunicorn_webapp/config.py &
+    export PYTHONPATH=$scriptdir:$scriptdir/seclay_xmlsig_proxy
+    gunicorn --config=/opt/etc/gunicorn/webapp_config.py pvzdweb.wsgi:application &
 }
 
 
 start_sig_proxy() {
     source /opt/venv/sigproxy/bin/activate
-    gunicorn wsgi:application -c /opt/etc/gunicorn_sigproxy/config.py &
+    PYTHONPATH=
+    gunicorn --config=/opt/etc/gunicorn/sigproxy_config.py wsgi:application &
 }
 
 
