@@ -6,7 +6,7 @@ pipeline {
         container='pvzdweb'
         pg_container='postgres_ci'
         pg_compose_cfg='dc_postgres.yaml'
-        d_containers="${container} dc_${container}_run_1 postgres_ci ${pg_container} pvzdweb "
+        d_containers="${container} dc_${container}_run_1 postgres_ci ${pg_container} pvzdweb dpvzdweb_pvzdweb_1"
         d_pg_volumes='postgres_ci.data'
         d_app_volumes='pvzdweb.config pvzdweb.var_lib_git pvzdweb.var_log pvzdweb.settings'
         service='pvzdweb'
@@ -96,6 +96,8 @@ pipeline {
                         #docker exec $container bash -l -c '/opt/PVZDweb/bin/pytest_all_noninteractive.sh'
                         exec_compose "down -v" || true
                         docker-compose $projopt -f $pg_compose_cfg down -v || true
+                        remove_containers $d_containers || true
+                        remove_volumes $d_app_volumes $d_pg_volumes || true
                     fi
                 '''
             }
@@ -106,11 +108,14 @@ pipeline {
                 sh '''#!/bin/bash -e
                     source ./jenkins_scripts.sh
                     make_postgres_running
-                    wait_for_database
+                    export CSRFENCRYPTKEY=$(openssl rand -base64 16)
+                    export CSRFSECRET=$(openssl rand -base64 16)
                     export DJANGO_SETTINGS_MODULE='pyzdwb.settings_jenkins'
-                    export DJANGO_SECRET_KEY=$(openssl rand -base64 30)
+                    export DJANGO_SECRET_KEY=$(openssl rand -base64 16)
+                    wait_for_database
                     exec_compose "--no-ansi up -d $container" && echo ''
-                    wait_for_container_up
+                    set_database_password
+                    sleep 1
                     load_testdata $compose_f_opt || true # TODO: test for return code when data has been cleaned
                     exec_compose "exec $nottyopt $container bash -l -c /tests/test_webapp.sh"
                 '''
@@ -138,8 +143,8 @@ pipeline {
                     echo "Keep container running"
                 else
                     source ./jenkins_scripts.sh
-                    remove_containers $d_containers && echo '.'
-                    remove_volumes $d_volumes && echo '.'
+                    exec_compose "down -v" || true
+                    docker-compose $projopt -f $pg_compose_cfg down -v || true
                 fi
             '''
         }
