@@ -3,8 +3,10 @@ version: "3.5"
 services:
   pvzdweb:
     image: local/pvzdweb
-    container_name: pvzdweb
+    # container_name: pvzdweb # do not specify container name, it confuses docker-compose exec
     command: /opt/bin/start_webapps.sh
+    labels:
+      pvzdweb.jenkins:
     #deploy:
     #  placement:
     #    constraints:
@@ -13,8 +15,12 @@ services:
     #  restart_policy:
     #    condition: on-failure
     environment:
-      DJANGO_SETTINGS_MODULE: pvzdweb.settings
+      DJANGO_SETTINGS_MODULE: pvzdweb.settings_jenkins
+      DJANGO_SECRET_KEY:
+      DJANGO_DEBUG:
       PGHOST: postgres_ci
+      CSRFSECRET:
+      CSRFENCRYPTKEY:
     restart: unless-stopped
     networks:
       jenkins:
@@ -22,6 +28,7 @@ services:
       - pvzdweb.config:/config:Z
       - mdreg.var_log:/var/log:Z
       - pvzdweb.settings:/opt/PVZDweb/pvzdweb:Z
+      - pvzdweb.root:/root:Z
 
 networks:
   jenkins:
@@ -36,3 +43,5 @@ volumes:
     name: mdreg.var_log
   pvzdweb.settings:
     name: pvzdweb.settings
+  pvzdweb.root:
+    name: pvzdweb.root

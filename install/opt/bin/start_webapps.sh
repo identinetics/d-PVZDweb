@@ -14,14 +14,15 @@ start_appserver() {
     # start gunicorn
     # settings.py/INSTALLED_APPS controls which webapps are serviced in this instance
     source /etc/profile.d/pvzdweb.sh
-    export PYTHONPATH=$scriptdir:$scriptdir/seclay_xmlsig_proxy
+    export PYTHONPATH=$APPHOME:$APPHOME/PVZDlib
+    # missing error message "worker failed ot boot"? add --preload option
     gunicorn --config=/opt/etc/gunicorn/webapp_config.py pvzdweb.wsgi:application &
 }
 
 
 start_sig_proxy() {
     source /opt/venv/sigproxy/bin/activate
-    PYTHONPATH=
+    PYTHONPATH=/opt/seclay_xmlsig_proxy
     gunicorn --config=/opt/etc/gunicorn/sigproxy_config.py wsgi:application &
 }
 

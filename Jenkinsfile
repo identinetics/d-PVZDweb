@@ -5,10 +5,15 @@ pipeline {
         compose_f_opt=''
         container='pvzdweb'
         pg_container='postgres_ci'
+        pg_compose_cfg='dc_postgres.yaml'
         d_containers="${container} dc_${container}_run_1 postgres_ci ${pg_container} pvzdweb "
-        d_volumes='postgres_ci.data pvzdweb.config pvzdweb.var_lib_git pvzdweb.var_log pvzdweb.settings'
+        d_pg_volumes='postgres_ci.data'
+        d_app_volumes='pvzdweb.config pvzdweb.var_lib_git pvzdweb.var_log pvzdweb.settings'
         service='pvzdweb'
-        projopt='-p jenkins'
+        project='jenkins'
+        projopt="-p $project"
+        // redundant from docker-compose (circumvent cocker-compose issued with `docker exec`):
+        image='r2h2/pvzdweb'
     }
     options { disableConcurrentBuilds() }
     parameters {
@@ -45,7 +50,7 @@ pipeline {
                 sh '''#!/bin/bash -e
                     source ./jenkins_scripts.sh
                     remove_containers $d_containers && echo '.'
-                    remove_volumes $d_volumes && echo '.'
+                    remove_volumes $d_app_volumes $d_pg_volumes && echo '.'
                     cp -f config.env.default config.env
                     cp -f secrets.env.default secrets.env
                 '''
@@ -55,7 +60,7 @@ pipeline {
             steps {
                 sh '''#!/bin/bash -e
                     source ./jenkins_scripts.sh
-                    remove_container_if_not_running
+                    remove_container_if_not_running $container
                     if [[ "$nocache" ]]; then
                          nocacheopt='-c'
                          echo 'build with option nocache'
@@ -67,43 +72,47 @@ pipeline {
                 '''
             }
         }
-        stage('Test: setup') {
+        stage('Unittest') {
             steps {
-                echo 'Setup unless already setup and running (keeping previously initialized data)'
+                echo 'Run tests unless already running (keeping previously initialized data)'
                 sh '''#!/bin/bash -e
                     source ./jenkins_scripts.sh
-                    is_running=$(test_if_running $container)
+                    is_running=$(test_if_container_running $container)
                     if [[ ! "$is_running" ]]; then
                         verify_python_env $compose_cfg
                         make_postgres_running
-                        wait_for_database $compose_f_opt
-                        load_testdata $compose_f_opt || true # TODO: test for return code when data has been cleaned
-                        echo "start server"
-                        docker-compose $projopt $compose_f_opt --no-ansi up -d $container && echo ''
-                    elif [[ ! "$start_clean" ]]; then
-                        echo 'container already running: restart using the existing volumes'
-                        docker-compose $projopt $compose_f_opt down
-                        docker-compose $projopt $compose_f_opt --no-ansi up -d $container && echo ''
+                        export CSRFENCRYPTKEY=$(openssl rand -base64 16)
+                        export CSRFSECRET=$(openssl rand -base64 16)
+                        export DJANGO_SETTINGS_MODULE='pyzdwb.settings_jenkins'
+                        export DJANGO_SECRET_KEY=$(openssl rand -base64 16)
+                        nottyopt=''; [[ -t 0 ]] || nottyopt='-T'  # autodetect tty
+                        wait_for_database
+                        exec_compose "--no-ansi up -d $service" && echo ''
+                        set_database_password
+                        echo " running pytest_all_noninteractive.sh"
+                        # docker-compose exec sometimes does not provide stdout in non-ptty mode -> use `docker exec`
+                        exec_compose "exec $nottyopt $service bash -l -c /opt/PVZDweb/bin/pytest_all_noninteractive.sh"
+                        exec_compose "logs $service"
+                        #docker exec $container bash -l -c '/opt/PVZDweb/bin/pytest_all_noninteractive.sh'
+                        exec_compose "down -v" || true
+                        docker-compose $projopt -f $pg_compose_cfg down -v || true
                     fi
-                    wait_for_container_up $container
                 '''
             }
         }
-        stage('Test: run') {
+        stage('Load/Run') {
             steps {
                 echo 'test webapp'
                 sh '''#!/bin/bash -e
-                    nottyopt=''; [[ -t 0 ]] || nottyopt='-T'  # autodetect tty
-                    cmd="docker-compose $projopt $compose_f_opt exec $nottyopt $container bash -l -c /opt/PVZDweb/bin/pytest_all_noninteractive.sh"
-                    echo $cmd; $cmd || rc=$?
-                    cmd="docker-compose $projopt $compose_f_opt exec $nottyopt $container bash -l -c /tests/test_webapp.sh"
-                    echo $cmd; $cmd || rc=$?
-                    if ((rc==0)); then
-                        echo "test OK"
-                    else
-                        echo "test failed"
-                        exit 1
-                    fi
+                    source ./jenkins_scripts.sh
+                    make_postgres_running
+                    wait_for_database
+                    export DJANGO_SETTINGS_MODULE='pyzdwb.settings_jenkins'
+                    export DJANGO_SECRET_KEY=$(openssl rand -base64 30)
+                    exec_compose "--no-ansi up -d $container" && echo ''
+                    wait_for_container_up
+                    load_testdata $compose_f_opt || true # TODO: test for return code when data has been cleaned
+                    exec_compose "exec $nottyopt $container bash -l -c /tests/test_webapp.sh"
                 '''
             }
         }
