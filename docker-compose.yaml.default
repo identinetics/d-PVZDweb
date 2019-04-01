@@ -6,7 +6,7 @@ services:
     # container_name: pvzdweb # do not specify container name, it confuses docker-compose exec
     command: /opt/bin/start_webapps.sh
     labels:
-      pvzdweb.jenkins: yes
+      pvzdweb.jenkins: default
     #deploy:
     #  placement:
     #    constraints:
@@ -25,10 +25,10 @@ services:
     networks:
       jenkins:
     volumes:
-      - pvzdweb.config:/config:Z
-      - mdreg.var_log:/var/log:Z
-      - pvzdweb.settings:/opt/PVZDweb/pvzdweb:Z
+      - pvzdweb.opt_etc:/opt/etc:Z
       - pvzdweb.root:/root:Z
+      - pvzdweb.settings:/opt/PVZDweb/pvzdweb:Z
+      - pvzdweb.var_log:/var/log:Z
 
 networks:
   jenkins:
@@ -37,11 +37,11 @@ networks:
     # attachable: true
 
 volumes:
-  pvzdweb.config:
-    name: pvzdweb.config
-  mdreg.var_log:
-    name: mdreg.var_log
-  pvzdweb.settings:
-    name: pvzdweb.settings
+  pvzdweb.opt_etc:
+    name: pvzdweb.opt_etc
   pvzdweb.root:
     name: pvzdweb.root
+  pvzdweb.settings:
+    name: pvzdweb.settings
+  pvzdweb.var_log:
+    name: mdreg.var_log
