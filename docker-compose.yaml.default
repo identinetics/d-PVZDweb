@@ -6,7 +6,7 @@ services:
     # container_name: pvzdweb # do not specify container name, it confuses docker-compose exec
     command: /opt/bin/start_webapps.sh
     labels:
-      pvzdweb.jenkins:
+      pvzdweb.jenkins: yes
     #deploy:
     #  placement:
     #    constraints:
