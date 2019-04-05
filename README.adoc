@@ -2,8 +2,8 @@
 
 == Funktion
 
-In PVZDweb sind die die Web Anwendungen Fedop, Portaladmin und Tnadmin enthalten, sowie der PEP.
-Die Daten werden in einer externen Postgre-DB gespeichert
+Im Repo PVZDweb sind die die Web Anwendungen Fedop, Portaladmin und Tnadmin enthalten, sowie der PEP.
+Die Daten werden in einer externen Postgre-DB gespeichert.
 
 
 == Übersicht der Artefakte
@@ -22,10 +22,8 @@ Der Container beinhaltet folgende Objekte/Services/etc.:
 
 == Vorbereitung der Installation
 
-Die Frontend-Webanwendungen sind mit je einem Docker Container vom Image pvzdweb realisiert.
-
-Das Service wird über einen externen Proxy angebunden, der TLS terminiert (z.B. https://mdreg.portalverbund.gv.at).
-
+Die Frontend-Webanwendungen und der PEP sind mit je einem Docker Container vom gleichen Image pvzdweb realisiert.
+Das Frontend-Service wird über einen externen Proxy angebunden, der TLS terminiert (z.B. https://mdreg.portalverbund.gv.at).
 Für die Kommunikation mit dem Backend Repo erfolgt über die Postgres-DB.
 
 

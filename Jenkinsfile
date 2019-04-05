@@ -12,7 +12,7 @@ pipeline {
         service='pvzdweb'
         project='jenkins'
         projopt="-p $project"
-        // redundant from docker-compose (circumvent cocker-compose issued with `docker exec`):
+        // redundant from docker-compose (circumvent docker-compose issued with `docker exec`):
         image='r2h2/pvzdweb'
     }
     options { disableConcurrentBuilds() }
