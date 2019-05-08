@@ -1,3 +1,5 @@
+// pipeline tools require python3 env with jinja2, pytest and pyyaml installed
+
 pipeline {
     agent any
     environment {
@@ -8,12 +10,13 @@ pipeline {
         pg_compose_cfg='dc_postgres.yaml'
         d_containers="${container} dc_${container}_run_1 postgres_ci ${pg_container} pvzdweb dpvzdweb_pvzdweb_1"
         d_pg_volumes='postgres_ci.data'
-        d_app_volumes='pvzdweb.config pvzdweb.var_lib_git pvzdweb.var_log pvzdweb.settings'
+        d_app_volumes='pvzdweb.opt_etc pvzdweb.root pvzdweb.settings pvzdweb.var_log'
         service='pvzdweb'
         project='jenkins'
         projopt="-p $project"
         // redundant from docker-compose (circumvent docker-compose issued with `docker exec`):
         image='r2h2/pvzdweb'
+        // BASH_TRACE=1
     }
     options { disableConcurrentBuilds() }
     parameters {
@@ -38,7 +41,8 @@ pipeline {
                     fi
                     cp -n config.env.default config.env
                     cp -n secrets.env.default secrets.env
-                    egrep '( image:| container_name:)' $compose_cfg || echo "missing keys in ${compose_cfg}"
+                    grep ' image:' $compose_cfg || echo "missing key 'service.image' in ${compose_cfg}"
+                    grep ' container_name:' $compose_cfg || echo "missing key 'service.container_name' in ${compose_cfg}"
                 '''
             }
         }
@@ -67,8 +71,8 @@ pipeline {
                     fi
                     export MANIFEST_SCOPE='local'
                     export PROJ_HOME='.'
-                    ./dcshell/build -f dc_build.yaml $nocacheopt || \
-                        (rc=$?; echo "build failed with rc rc?"; exit $rc)
+                    ./dcshell/build $compose_f_opt $nocacheopt || \
+                        (rc=$?; echo "build failed with rc ${rc}"; exit $rc)
                 '''
             }
         }
@@ -142,9 +146,9 @@ pipeline {
                 if [[ "$keep_running" ]]; then
                     echo "Keep container running"
                 else
+                    echo 'Cleanup: container, volumes'
                     source ./jenkins_scripts.sh
-                    exec_compose "down -v" || true
-                    docker-compose $projopt -f $pg_compose_cfg down -v || true
+                    exec_compose "rm --force -v" || true
                 fi
             '''
         }

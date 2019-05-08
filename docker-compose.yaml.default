@@ -2,8 +2,10 @@
 version: "3.5"
 services:
   pvzdweb:
+    build:
+      context: .
     image: local/pvzdweb
-    # container_name: pvzdweb # do not specify container name, it confuses docker-compose exec
+    container_name: pvzdweb
     command: /opt/bin/start_webapps.sh
     labels:
       pvzdweb.jenkins: default
@@ -44,4 +46,4 @@ volumes:
   pvzdweb.settings:
     name: pvzdweb.settings
   pvzdweb.var_log:
-    name: mdreg.var_log
+    name: pvzdweb.var_log

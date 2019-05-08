@@ -18,7 +18,7 @@
 #       range.
 #
 
-bind = '127.0.0.1:8081'
+bind = '127.0.0.1:8000'
 backlog = 200
 
 #
@@ -127,7 +127,6 @@ raw_env = [
     'DJANGO_SECRET_KEY=something_generated_eg_with_openssl_rand_base64',
     'SPAM=eggs',
 ]
-pidfile = None
 umask = 0
 user = None
 group = None
@@ -145,10 +144,10 @@ tmp_upload_dir = None
 #       A string of "debug", "info", "warning", "error", "critical"
 #
 
-accesslog = '-'
-errorlog = '-'
-#accesslog = '/var/log/webapp/access.log'
-#errorlog = '/var/log/webapp/error.log'
+#accesslog = '-'
+#errorlog = '-'
+accesslog = '/var/log/webapp/access.log'
+errorlog = '/var/log/webapp/error.log'
 loglevel = 'info'
 access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'
 

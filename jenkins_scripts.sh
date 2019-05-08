@@ -1,5 +1,9 @@
 #!/bin/bash -exv
-PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+if [[ "$BASH_TRACE" ]]; then
+    set -xv
+    PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+fi
+
 
 exec_compose() {
     local cmd=$1
@@ -56,7 +60,7 @@ make_postgres_running() {
 
 remove_container_if_not_running() {
     local container=$1
-    echo 'remove container if no running'
+    echo 'remove container if not running'
     local status=$(docker container inspect -f '{{.State.Status}}' $container 2>/dev/null || echo '')
     if [[ "$status" ]]; then
         docker container rm -f $container >/dev/null 2>&1 || true # remove any stopped container

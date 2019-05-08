@@ -6,7 +6,7 @@ RUN yum -y update \
  && yum -y install libffi-devel libxslt-devel libxml2 libxml2-devel openssl-devel \
  && yum -y install openldap-devel python36u-devel \
  && yum -y install epel-release \
- && yum -y install nginx \
+ && yum -y install logrotate nginx \
  && yum clean all
 ENV JAVA_HOME=/etc/alternatives/java_sdk_1.8.0 \
     JDK_HOME=/etc/alternatives/java_sdk_1.8.0 \
@@ -20,13 +20,14 @@ RUN yum install -y postgresql \
  && yum clean all
 
 # install web application
-COPY install/PVZDweb /opt/PVZDweb
+ENV APPHOME=/opt/PVZDweb
+COPY install/PVZDweb $APPHOME
 RUN pip3.6 install virtualenv \
- && mkdir -p /opt/venv \
+ && mkdir -p /opt/venv /var/log/webapp/ /var/run/webapp/ \
  && virtualenv --python=/usr/bin/python3.6 /opt/venv/pvzdweb \
  && source /opt/venv/pvzdweb/bin/activate \
  && pip install Cython \
- && pip install -r /opt/PVZDweb/requirements.txt
+ && pip install -r $APPHOME/requirements.txt
 COPY install/etc/profile.d/pvzdweb.sh /etc/profile.d/pvzdweb.sh
 
 # install sig proxy
@@ -34,7 +35,7 @@ COPY install/seclay_xmlsig_proxy /opt/seclay_xmlsig_proxy
 RUN virtualenv --python=/usr/bin/python3.6 /opt/venv/sigproxy \
  && source /opt/venv/sigproxy/bin/activate \
  && pip install -r /opt/seclay_xmlsig_proxy/requirements.txt \
- && mkdir -p /var/log/sigproxy/
+ && mkdir -p /var/log/sigproxy/ /var/run/sigproxy/
 
 # install custom config and scripts
 COPY install/opt /opt
@@ -53,7 +54,9 @@ RUN chmod +x /opt/bin/manifest2.sh \
  && mkdir -p $HOME/.config/pip \
  && printf "[global]\ndisable-pip-version-check = True\n" > $HOME/.config/pip/pip.conf
 
-ENV APPHOME /opt/PVZDweb
+
+COPY install/etc/logrotate /opt/etc/logrotate
+
 VOLUME /opt/etc \
        /opt/PVZDweb/pvzdweb \
        /var/log
