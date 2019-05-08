@@ -72,7 +72,8 @@ In der Django Settings Datei sind folgende Einträge anzupassen:
 == Authentifizierng
 
 Die Authentifizierung erfolgt in der externen Infrastruktur per PVP.
-die Anwendung benötigt die userId in einem HTTP Header.
+Siehe das README von PVZDweb.
+Die Anwendung benötigt dafür die UserId im HTTP Header X-PVP-USERID.
 Der Name des Headers wird in SigProxyconfig.userid_http_header konfiguriert.
 
 
@@ -88,3 +89,15 @@ Das Script sollte täglich aufgerufen werden, z.B.:
 
     docker.compose [-f config] exec <service> /opt/bin/rotate_logs.sh [-v]
 
+== Fehlersuche
+
+Der Aufruf der Webanwendung erfolgt über eine Proxy-Kaskade,
+was bei der Fehlersuche ("500 internal server error" etc.) eine entsprechende Rücksicht erfordert.
+
+Die Quellen für HTTP-codes >= 400 können an folgenden Stellen liegen:
+1. Edge-Proxy
+2. PVP-Reverse Proxy (wenn vorhanden)
+3. Nginx im pvzdweb-Container  (/var/log/nginx)
+4. Webserver/gunicorn (/var/log/webapp und /var/log/sigproxy)
+5. Webapp/django (hat kein eigenes Logfile. Zur Fehlersuche muss DEBUG=Trie gesetzt werden,
+   oder DJANGO_DEBUG für den Container.)
