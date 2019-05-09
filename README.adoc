@@ -99,5 +99,6 @@ Die Quellen für HTTP-codes >= 400 können an folgenden Stellen liegen:
 2. PVP-Reverse Proxy (wenn vorhanden)
 3. Nginx im pvzdweb-Container  (/var/log/nginx)
 4. Webserver/gunicorn (/var/log/webapp und /var/log/sigproxy)
-5. Webapp/django (hat kein eigenes Logfile. Zur Fehlersuche muss DEBUG=Trie gesetzt werden,
-   oder DJANGO_DEBUG für den Container.)
+5. Webapp/django hat kein eigenes Logfile.
+   Zur Fehlersuche muss in den Django Settings (-> DJANGO_SETTINGS_MODULE) DEBUG=True gesetzt werden,
+   oder DJANGO_DEBUG für den Container.
