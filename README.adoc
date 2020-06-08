@@ -13,9 +13,9 @@ Der Container beinhaltet folgende Objekte/Services/etc.:
 |===
 | Artefakt | Wert | Beschreibung
 | APPHOME | /opt/PVZDweb | App Root Directory
-| Django Konfiguration | pvzdweb/settings_<appname>
+| Django Konfiguration | pvzdweb/settings_<appname> |
 | Logging | STDOUT/STDERR |
-| PEP Startscript | bin/pep.sh
+| PEP Startscript | bin/pep.sh |
 | Service | django webapp | Anwendung je nach Django Konfiguration (INSTALLED_APPS)
 |===
 
